@@ -1,0 +1,15 @@
+[package]
+name = "ci_music"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+hound = "3.5"
+rustfft = "6.2"
+clap = { version = "4", features = ["derive"] }
+axum = { version = "0.8", features = ["multipart"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+symphonia = { version = "0.5", features = ["mp3", "aac", "flac", "ogg", "vorbis", "wav", "pcm", "isomp4"] }
+
+[dev-dependencies]
+tower = { version = "0.5", features = ["util"] }

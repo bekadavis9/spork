@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<!--
+  CI Music Demo — standalone Reveal.js presentation
+  Open with: open demo.html   (Safari works for local audio)
+  Or serve:  python3 -m http.server 8080  (then visit localhost:8080/demo.html)
+  Live UI:   cargo run -- serve  (localhost:3000)
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>As Heard Through a Cochlear Implant</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reset.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/black.css">
+  <style>
+    /* ── Base ──────────────────────────────────────────────── */
+    .reveal-viewport { background: #0d1117; }
+    .reveal {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      color: #e6edf3;
+    }
+    .reveal h1, .reveal h2, .reveal h3 {
+      color: #e6edf3;
+      text-transform: none;
+      letter-spacing: -0.02em;
+    }
+    .reveal h1 { font-size: 2.4rem; line-height: 1.25; }
+    .reveal h2 { font-size: 1.75rem; margin-bottom: 0.75rem; }
+    .reveal p  { margin: 0.5rem 0; }
+
+    .muted  { color: #8b949e; }
+    .blue   { color: #79b8ff; }
+    .yellow { color: #f0c844; }
+    .green  { color: #56d364; }
+    .red    { color: #f85149; }
+
+    /* ── Slide 1 (Title) ───────────────────────────────────── */
+    .title-sub    { color: #8b949e; font-size: 1rem; margin-top: 0.4rem; }
+    .title-byline { color: #6e7681; font-size: 0.85rem; margin-top: 1.75rem; }
+
+    /* ── Slide 2 (Hook) ────────────────────────────────────── */
+    .hook-label {
+      color: #6e7681; font-size: 0.78rem;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      margin-bottom: 0.75rem;
+    }
+    .reveal audio {
+      width: 100%; max-width: 520px;
+      margin: 0.6rem auto; display: block; outline: none;
+    }
+    .hook-reveal {
+      margin-top: 1.5rem; font-style: italic;
+      color: #79b8ff; font-size: 1.05rem;
+    }
+
+    /* ── Slides 3 & 4 (Cochlea) ────────────────────────────── */
+    .cochlea-row {
+      display: flex; gap: 2.5rem;
+      align-items: center; justify-content: center;
+      margin-top: 0.5rem;
+    }
+    .cochlea-col { text-align: center; }
+    .cochlea-col svg { display: block; margin: 0 auto; }
+    .freq-labels {
+      display: flex; justify-content: space-between;
+      font-size: 0.7rem; color: #6e7681;
+      margin-top: 4px;
+    }
+
+    .cochlea-pair {
+      display: flex; gap: 2rem;
+      justify-content: center; align-items: flex-start;
+      margin-top: 0.75rem;
+    }
+    .ccard {
+      background: #161b22; border: 1px solid #30363d;
+      border-radius: 12px; padding: 1rem 1.4rem; text-align: center;
+    }
+    .ccard h3 {
+      font-size: 0.8rem; text-transform: uppercase;
+      letter-spacing: 0.09em; color: #8b949e;
+      margin: 0 0 0.5rem;
+    }
+    .ccard .big { font-size: 2rem; font-weight: 700; margin: 0.4rem 0 0.1rem; }
+    .ccard .sub { color: #6e7681; font-size: 0.78rem; line-height: 1.6; }
+
+    /* ── Slide 5 (Preserved / Lost) ───────────────────────── */
+    .pl-pair { display: flex; gap: 2rem; justify-content: center; margin-top: 1rem; }
+    .pl-col {
+      background: #161b22; border: 1px solid #30363d;
+      border-radius: 10px; padding: 1.1rem 1.8rem; min-width: 210px;
+    }
+    .pl-col h3 {
+      font-size: 0.8rem; text-transform: uppercase;
+      letter-spacing: 0.09em; margin: 0 0 0.8rem;
+    }
+    .pl-col ul { list-style: none; padding: 0; margin: 0; }
+    .pl-col li { padding: 0.25rem 0; font-size: 0.9rem; color: #e6edf3; }
+    .preserved h3 { color: #56d364; }
+    .preserved li::before { content: "✓  "; color: #56d364; }
+    .lost h3 { color: #f85149; }
+    .lost li::before { content: "✗  "; color: #f85149; }
+    .partial { color: #f0c844 !important; }
+    .partial::before { content: "~  " !important; color: #f0c844 !important; }
+
+    /* ── Slide 6 (Demo) ────────────────────────────────────── */
+    .demo-link {
+      display: inline-block; margin: 0.9rem 0;
+      padding: 0.65rem 2.4rem;
+      background: #1f4a8f; border: 1px solid #58a6ff;
+      border-radius: 8px; color: #79b8ff;
+      font-family: 'SFMono-Regular', Consolas, monospace; font-size: 1.1rem;
+      text-decoration: none;
+    }
+    .demo-steps {
+      text-align: left; max-width: 380px; margin: 0.75rem auto 0;
+      color: #8b949e; font-size: 0.88rem; line-height: 2.1;
+    }
+    .demo-steps b { color: #e6edf3; }
+
+    /* ── Slide (Hair Cells) ────────────────────────────────── */
+    .hair-row {
+      display: flex; gap: 2rem; justify-content: center;
+      margin-top: 0.75rem;
+    }
+    .hcard {
+      background: #161b22; border: 1px solid #30363d;
+      border-radius: 10px; padding: 0.9rem 1.2rem; text-align: center;
+    }
+    .hcard h3 {
+      font-size: 0.75rem; text-transform: uppercase;
+      letter-spacing: 0.09em; margin: 0 0 0.5rem;
+    }
+    .hcard.healthy h3 { color: #56d364; }
+    .hcard.damaged h3 { color: #f85149; }
+    .hcard svg { display: block; margin: 0 auto; }
+    .hcard .hcap { color: #6e7681; font-size: 0.7rem; margin-top: 0.4rem; }
+
+    /* ── Slide (Frequency Resolution) ─────────────────────── */
+    .res-rows { display: flex; flex-direction: column; gap: 14px; max-width: 680px; margin: 1rem auto 0; }
+    .res-row  { display: flex; align-items: center; gap: 14px; }
+    .res-label { width: 148px; flex-shrink: 0; font-size: 0.8rem; color: #8b949e; text-align: right; }
+    .res-label strong { display: block; color: #c9d1d9; font-size: 0.87rem; }
+    .res-bar {
+      flex: 1; height: 24px; border-radius: 4px; overflow: hidden;
+      display: flex; gap: 1px; background: #21262d;
+    }
+    .res-bar-seg { flex: 1; }
+
+    /* ── Slide 7 (Algorithm) ───────────────────────────────── */
+    .pipeline {
+      display: flex; align-items: center; gap: 0.35rem;
+      flex-wrap: wrap; justify-content: center;
+      margin: 1.25rem 0; font-size: 0.78rem;
+    }
+    .pbox {
+      background: #161b22; border: 1px solid #30363d;
+      border-radius: 6px; padding: 0.4rem 0.75rem;
+      color: #e6edf3; text-align: center; white-space: nowrap;
+    }
+    .pbox small { display: block; color: #6e7681; font-size: 0.68rem; margin-top: 2px; }
+    .parrow { color: #484f58; }
+    .pbox-cis { border-color: rgba(240,200,68,0.5); }
+    .pbox-fs4 { border-color: rgba(121,184,255,0.5); }
+  </style>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- ══════════════════════════════════════════════════════════
+     SLIDE 1 — Title
+═══════════════════════════════════════════════════════════ -->
+<section data-background-color="#0d1117">
+  <h1>As Heard Through a<br>Cochlear Implant</h1>
+  <p class="title-sub">Rust Simulation</p>
+  <p class="title-byline">Beck Davis</p>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════
+     SLIDE 3 — The cochlea: how normal hearing works
+═══════════════════════════════════════════════════════════ -->
+<section data-background-color="#0d1117">
+  <h2 style="font-size:2rem; margin-bottom:0.9rem;">The Cochlea</h2>
+  <div style="display:flex; gap:2.5rem; align-items:center; justify-content:center;">
+    <div style="display:flex; flex-direction:column; align-items:center;">
+      <svg id="cochleaNormal" width="430" height="380" viewBox="0 0 520 460"></svg>
+      <p style="font-size:0.6rem; color:#484f58; margin:0; text-align:center;">
+        Adapted from Encyclopædia Britannica, Inc. (1997) via ResearchGate
+      </p>
+    </div>
+    <ul style="list-style:none; padding:0; margin:0; text-align:left; max-width:280px; font-size:0.9rem; line-height:1.6; color:#e6edf3;">
+      <li style="margin-bottom:1rem;">Each position along the 720° spiral responds to a different pitch</li>
+      <li><strong>~3,500 hair cells</strong> convert those vibrations into nerve signals</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════
+     SLIDE 4b — Hair cell death (sensorineural hearing loss)
+═══════════════════════════════════════════════════════════ -->
+<section data-background-color="#0d1117">
+  <h2>Why hearing aids don't help</h2>
+  <p class="muted" style="font-size:0.85rem; margin-bottom:0.5rem;">90% of deafness is <em>sensorineural</em> — the hair cells are dead, not the ear canal.</p>
+  <div class="hair-row">
+    <div class="hcard healthy">
+      <h3>Healthy</h3>
+      <svg id="hairHealthy" width="120" height="130"></svg>
+      <div class="hcap">All cells active</div>
+    </div>
+    <div class="hcard damaged">
+      <h3>Sensorineural loss</h3>
+      <svg id="hairDamaged" width="120" height="130"></svg>
+      <div class="hcap">Most cells gone</div>
+    </div>
+  </div>
+  <p class="muted" style="font-size:0.82rem; margin-top:1rem; max-width:540px; margin-left:auto; margin-right:auto;">
+    Hair cells cannot regenerate. A hearing aid amplifies the signal — but if the receiver is gone, amplifying silence achieves nothing. A cochlear implant <strong style="color:#e6edf3;">bypasses</strong> the dead cells entirely.
+  </p>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════
+     SLIDE 3b — How a CI works (device anatomy)
+═══════════════════════════════════════════════════════════ -->
+<section data-background-color="#0d1117">
+  <h2 style="font-size:2rem; margin-bottom:0.9rem;">The Cochlear Implant</h2>
+  <div style="display:flex; gap:2rem; align-items:center; justify-content:center;">
+    <svg id="ciDevice" width="440" height="330" viewBox="0 0 500 360"></svg>
+    <ol style="list-style:none; padding:0; margin:0; text-align:left; max-width:310px; font-size:0.88rem; line-height:1.55; color:#e6edf3;">
+      <li class="fragment" style="margin-bottom:0.9rem; display:flex; gap:0.65rem; align-items:flex-start;">
+        <span style="color:#79b8ff; font-weight:700; min-width:1.1rem; flex-shrink:0;">1</span>
+        <span><strong>Microphone &amp; processor</strong> — digitizes sound, splits into frequency bands</span>
+      </li>
+      <li class="fragment" style="margin-bottom:0.9rem; display:flex; gap:0.65rem; align-items:flex-start;">
+        <span style="color:#79b8ff; font-weight:700; min-width:1.1rem; flex-shrink:0;">2</span>
+        <span>Wirelessly <strong>transmits through the skull</strong> via magnetic induction — no wires cross the skin</span>
+      </li>
+      <li class="fragment" style="margin-bottom:0.9rem; display:flex; gap:0.65rem; align-items:flex-start;">
+        <span style="color:#f0c844; font-weight:700; min-width:1.1rem; flex-shrink:0;">3</span>
+        <span><strong>Implanted receiver</strong> — embedded in bone behind the ear — decodes and drives the electrodes</span>
+      </li>
+      <li class="fragment" style="display:flex; gap:0.65rem; align-items:flex-start;">
+        <span style="color:#56d364; font-weight:700; min-width:1.1rem; flex-shrink:0;">4</span>
+        <span><strong>Electrode array</strong> stimulates the auditory nerve directly, bypassing dead hair cells</span>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════
+     SLIDE 4 — What a CI does: hair cells → electrodes
+═══════════════════════════════════════════════════════════ -->
+<section data-background-color="#0d1117">
+  <h2>What a cochlear implant does</h2>
+  <div class="cochlea-pair">
+    <div class="ccard">
+      <h3>Normal Hearing</h3>
+      <svg id="cochleaFull" width="170" height="170" viewBox="0 0 170 170"></svg>
+      <div class="big yellow" style="font-size:1.4rem; white-space:nowrap;">~3,500 hair cells</div>
+      <div class="sub">720° coverage</div>
+    </div>
+    <div class="ccard">
+      <h3>Cochlear Implant</h3>
+      <svg id="cochleaCI" width="170" height="170" viewBox="0 0 170 170"></svg>
+      <div class="big blue" style="font-size:1.4rem; white-space:nowrap;">4 – 24 electrodes</div>
+      <div class="sub">~450° coverage</div>
+    </div>
+  </div>
+  <p class="muted" style="font-size:0.82rem; margin-top:0.75rem;">
+    Each electrode fires at a broad frequency range, or channel.
+  </p>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════
+     SLIDE 4c — Frequency resolution: what channel count means
+═══════════════════════════════════════════════════════════ -->
+<section data-background-color="#0d1117">
+  <h2>More channels = finer resolution</h2>
+  <p class="muted" style="font-size:0.85rem; margin-bottom:0; max-width:580px; margin-left:auto; margin-right:auto;">Each electrode covers a broad frequency slice. Fewer electrodes = less pitch detail.</p>
+  <div class="res-rows" id="resSlide"></div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════
+     SLIDE 5 — What's preserved vs lost
+═══════════════════════════════════════════════════════════ -->
+<section data-background-color="#0d1117">
+  <h2>What survives. What doesn't.</h2>
+  <div class="pl-pair">
+    <div class="pl-col preserved">
+      <h3>Preserved</h3>
+      <ul>
+        <li>Rhythm &amp; timing</li>
+        <li>Loudness</li>
+        <li>Speech <span class="muted">(learned over time)</span></li>
+        <li class="partial">Rough pitch <span class="muted">(FS4 strategy)</span></li>
+      </ul>
+    </div>
+    <div class="pl-col lost">
+      <h3>Lost / degraded</h3>
+      <ul>
+        <li>Pitch detail</li>
+        <li>Timbre</li>
+        <li>Melody</li>
+        <li>Harmonic richness</li>
+      </ul>
+    </div>
+  </div>
+  <p class="muted" style="font-size:0.82rem; margin-top:1.1rem; max-width:580px; margin-left:auto; margin-right:auto; font-style:italic;">
+    "Rhythm is carried by amplitude envelopes — which CIs preserve.<br>
+    Pitch and timbre require temporal fine structure — which CIs largely discard."
+  </p>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════
+     SLIDE 7 — How it works (algorithm)
+═══════════════════════════════════════════════════════════ -->
+<section data-background-color="#0d1117">
+  <h2>Rust Simulator</h2>
+  <p class="muted" style="font-size:0.83rem; margin-bottom:1.5rem;">
+    Rust processes a 4-minute song in <strong style="color:#e6edf3;">under a second.</strong>
+  </p>
+  <div class="pipeline" style="margin-bottom:1.5rem;">
+    <div class="pbox">WAV in</div>
+    <span class="parrow">→</span>
+    <div class="pbox">N log-spaced<br>bandpass filters<small>70 Hz – 8.5 kHz</small></div>
+    <span class="parrow">→</span>
+    <div class="pbox">Rectify +<br>400 Hz lowpass<small>envelope extraction</small></div>
+    <span class="parrow">→</span>
+    <div class="pbox">× carrier<small>noise or sine</small></div>
+    <span class="parrow">→</span>
+    <div class="pbox">Sum channels</div>
+    <span class="parrow">→</span>
+    <div class="pbox">WAV out</div>
+  </div>
+  <div class="fragment" style="display:flex; gap:1.5rem; justify-content:center;">
+    <div style="background:rgba(240,200,68,0.07); border:1px solid rgba(240,200,68,0.3); border-radius:10px; padding:0.7rem 1.4rem; text-align:center;">
+      <div style="color:#f0c844; font-weight:600; font-size:0.85rem;">Classic Cochlear Implant (1990s)</div>
+      <div style="color:#6e7681; font-size:0.78rem; margin-top:0.25rem;">rhythm and loudness only</div>
+    </div>
+    <div style="background:rgba(121,184,255,0.07); border:1px solid rgba(121,184,255,0.3); border-radius:10px; padding:0.7rem 1.4rem; text-align:center;">
+      <div style="color:#79b8ff; font-weight:600; font-size:0.85rem;">Advanced Cochlear Implant (2010s)</div>
+      <div style="color:#6e7681; font-size:0.78rem; margin-top:0.25rem;">adds rough pitch in the bass range</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════
+     SLIDE 6 — Live demo
+═══════════════════════════════════════════════════════════ -->
+<section data-background-color="#0d1117">
+  <h2>Live demo</h2>
+  <a class="demo-link" href="http://localhost:3000" target="_blank">localhost:3000</a>
+</section>
+
+</div><!-- .slides -->
+</div><!-- .reveal -->
+
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+<script>
+  Reveal.initialize({
+    hash: true,
+    transition: 'fade',
+    transitionSpeed: 'fast',
+    controls: true,
+    progress: true,
+    center: true,
+    width: 920,
+    height: 620,
+  });
+
+  // ── Cochlea spiral drawing ────────────────────────────────────────────
+  // Same parameterization as the web UI:
+  //   t = 0      → entrance (treble, outer ring)
+  //   t = THETA_MAX → apex (bass, center)
+  //   REACHABLE_FRAC = 450°/720° ≈ 0.625 (standard CI array coverage)
+
+  function spiralColor(frac, l = 62) {
+    // frac: 0 = treble/base (purple 270°) → 1 = bass/apex (red 0°)
+    // Full visible spectrum: purple → blue → green → yellow → orange → red
+    // Always maps to ABSOLUTE position in the full cochlea.
+    // Less coverage = fewer hues shown, not a re-scaled rainbow.
+    const hue = 270 - frac * 270;
+    return `hsl(${hue}, 90%, ${l}%)`;
+  }
+
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  function mkEl(tag) { return document.createElementNS(SVG_NS, tag); }
+
+  function drawSpiral(svg, showCI, nElectrodes = 12) {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+    const vb    = svg.viewBox.baseVal;
+    const cx    = vb.width / 2;
+    const cy    = vb.height / 2;
+    const R_MAX = cx - 12;
+    const R_MIN = 8;
+    const THETA_MAX      = 2.5 * 2 * Math.PI;
+    const REACHABLE_FRAC = 0.625;
+    const SEGS = 320;
+
+    function pt(t) {
+      const r = R_MIN + (R_MAX - R_MIN) * (1 - t / THETA_MAX);
+      return [cx + r * Math.cos(t), cy + r * Math.sin(t)];
+    }
+
+    // Spiral segments
+    for (let i = 0; i < SEGS; i++) {
+      const t0 = (i / SEGS) * THETA_MAX;
+      const t1 = ((i + 1) / SEGS) * THETA_MAX;
+      const [x0, y0] = pt(t0);
+      const [x1, y1] = pt(t1);
+
+      let color;
+      if (showCI) {
+        // Color by absolute position in the full cochlea — covered region shows
+        // only the treble-end hues; uncovered bass region is dark (missing range).
+        color = t0 <= THETA_MAX * REACHABLE_FRAC
+          ? spiralColor(t0 / THETA_MAX)
+          : '#21262d';
+      } else {
+        color = spiralColor(t0 / THETA_MAX);
+      }
+
+      const line = mkEl('line');
+      line.setAttribute('x1', x0.toFixed(2)); line.setAttribute('y1', y0.toFixed(2));
+      line.setAttribute('x2', x1.toFixed(2)); line.setAttribute('y2', y1.toFixed(2));
+      line.setAttribute('stroke', color);
+      line.setAttribute('stroke-width', '7');
+      line.setAttribute('stroke-linecap', 'round');
+      svg.appendChild(line);
+    }
+
+    // Electrode dots for CI view
+    if (showCI) {
+      for (let i = 0; i < nElectrodes; i++) {
+        const tMid = THETA_MAX * REACHABLE_FRAC * (i + 0.5) / nElectrodes;
+        const [ex, ey] = pt(tMid);
+        const color = spiralColor(tMid / THETA_MAX); // absolute position
+
+        // Halo
+        const halo = mkEl('circle');
+        halo.setAttribute('cx', ex.toFixed(2)); halo.setAttribute('cy', ey.toFixed(2));
+        halo.setAttribute('r', '7'); halo.setAttribute('fill', color); halo.setAttribute('opacity', '0.18');
+        svg.appendChild(halo);
+
+        // Ring
+        const ring = mkEl('circle');
+        ring.setAttribute('cx', ex.toFixed(2)); ring.setAttribute('cy', ey.toFixed(2));
+        ring.setAttribute('r', '4.5'); ring.setAttribute('fill', '#0d1117');
+        ring.setAttribute('stroke', color); ring.setAttribute('stroke-width', '1.8');
+        svg.appendChild(ring);
+
+        // Dot
+        const dot = mkEl('circle');
+        dot.setAttribute('cx', ex.toFixed(2)); dot.setAttribute('cy', ey.toFixed(2));
+        dot.setAttribute('r', '2'); dot.setAttribute('fill', color);
+        svg.appendChild(dot);
+      }
+    }
+  }
+
+  // ── Hair cell diagrams ────────────────────────────────────────────────────
+  const DEAD_CELLS = new Set([1, 3, 4, 6, 8, 10, 12, 14]); // deterministic damage pattern
+
+  function buildHairCells(container, damaged) {
+    container.innerHTML = '';
+    const W = 120, H = 130, CELLS = 15;
+    const SPACING = W / CELLS;
+    const BM_Y = H - 16;
+
+    const bm = mkEl('rect');
+    bm.setAttribute('x', 0); bm.setAttribute('y', BM_Y);
+    bm.setAttribute('width', W); bm.setAttribute('height', 10);
+    bm.setAttribute('fill', '#30363d'); bm.setAttribute('rx', 2);
+    container.appendChild(bm);
+
+    for (let i = 0; i < CELLS; i++) {
+      const cx = (i + 0.5) * SPACING;
+      const isDead = damaged && DEAD_CELLS.has(i);
+
+      if (isDead) {
+        const stub = mkEl('rect');
+        stub.setAttribute('x', cx - 2); stub.setAttribute('y', BM_Y - 5);
+        stub.setAttribute('width', 4); stub.setAttribute('height', 5);
+        stub.setAttribute('fill', '#21262d'); stub.setAttribute('rx', 1);
+        container.appendChild(stub);
+      } else {
+        const hue = 270 - (i / (CELLS - 1)) * 270;
+        const color = damaged ? '#56d36499' : `hsl(${hue}, 90%, 58%)`;
+        const bodyH = 14;
+        const ciliH = 18 + (i % 3) * 4;
+
+        const body = mkEl('rect');
+        body.setAttribute('x', cx - 3); body.setAttribute('y', BM_Y - bodyH);
+        body.setAttribute('width', 6); body.setAttribute('height', bodyH);
+        body.setAttribute('fill', color); body.setAttribute('rx', 1.5);
+        container.appendChild(body);
+
+        for (let k = -1; k <= 1; k++) {
+          const cil = mkEl('line');
+          cil.setAttribute('x1', cx + k * 2); cil.setAttribute('y1', BM_Y - bodyH);
+          cil.setAttribute('x2', cx + k * 2.5); cil.setAttribute('y2', BM_Y - bodyH - ciliH);
+          cil.setAttribute('stroke', color);
+          cil.setAttribute('stroke-width', '1.4'); cil.setAttribute('stroke-linecap', 'round');
+          container.appendChild(cil);
+        }
+      }
+    }
+  }
+
+  // ── Cochlea with frequency labels (Britannica-style tube) ────────────────
+  function drawCochleaLabeled(svg) {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+    const CX = 248, CY = 215;
+    const R_MAX = 158, R_MIN = 36;
+    const TM = 2.25 * 2 * Math.PI;   // 2.25 turns — less tightly coiled
+    const SEGS = 300;
+    const F_HIGH = 20000, F_LOW = 20;
+
+    function pt(t) {
+      const r = R_MIN + (R_MAX - R_MIN) * (1 - t / TM);
+      return [CX + r * Math.cos(t), CY + r * Math.sin(t)];
+    }
+
+    function freqToT(f) {
+      return TM * Math.log(F_HIGH / f) / Math.log(F_HIGH / F_LOW);
+    }
+
+    // colorFn: string for uniform, or (t0) => string for per-segment
+    function drawPass(width, colorFn) {
+      for (let i = 0; i < SEGS; i++) {
+        const t0 = (i / SEGS) * TM, t1 = ((i + 1) / SEGS) * TM;
+        const [x0, y0] = pt(t0), [x1, y1] = pt(t1);
+        const seg = mkEl('line');
+        seg.setAttribute('x1', x0.toFixed(1)); seg.setAttribute('y1', y0.toFixed(1));
+        seg.setAttribute('x2', x1.toFixed(1)); seg.setAttribute('y2', y1.toFixed(1));
+        seg.setAttribute('stroke', typeof colorFn === 'function' ? colorFn(t0) : colorFn);
+        seg.setAttribute('stroke-width', String(width));
+        seg.setAttribute('stroke-linecap', 'round');
+        svg.appendChild(seg);
+      }
+    }
+
+    // Layered tube: dark shadow → rainbow outer wall → lighter rainbow body → dark center
+    drawPass(32, '#0d1a2e');                              // shadow outline
+    drawPass(22, t => spiralColor(t / TM, 52));          // darker outer wall
+    drawPass(14, t => spiralColor(t / TM, 70));          // brighter inner duct
+    drawPass(4,  '#1a2a3a');                              // dark center channel
+
+    // Closed apex cap
+    const [ax, ay] = pt(TM);
+    const capOuter = mkEl('circle');
+    capOuter.setAttribute('cx', ax.toFixed(1)); capOuter.setAttribute('cy', ay.toFixed(1));
+    capOuter.setAttribute('r', '18'); capOuter.setAttribute('fill', spiralColor(1.0, 52));
+    capOuter.setAttribute('stroke', '#0d1a2e'); capOuter.setAttribute('stroke-width', '4');
+    svg.appendChild(capOuter);
+    const capInner = mkEl('circle');
+    capInner.setAttribute('cx', ax.toFixed(1)); capInner.setAttribute('cy', ay.toFixed(1));
+    capInner.setAttribute('r', '9'); capInner.setAttribute('fill', spiralColor(1.0, 70));
+    svg.appendChild(capInner);
+
+    const LC   = '#ffffff';
+    const LD   = '#8aaec8';
+    const FONT = '-apple-system, BlinkMacSystemFont, Helvetica, sans-serif';
+
+    function mkLeader(x1, y1, x2, y2) {
+      const l = mkEl('line');
+      l.setAttribute('x1', x1.toFixed(1)); l.setAttribute('y1', y1.toFixed(1));
+      l.setAttribute('x2', x2.toFixed(1)); l.setAttribute('y2', y2.toFixed(1));
+      l.setAttribute('stroke', LD); l.setAttribute('stroke-width', '1.5');
+      l.setAttribute('stroke-dasharray', '4,3');
+      svg.appendChild(l);
+    }
+
+    function mkDot(x, y) {
+      const d = mkEl('circle');
+      d.setAttribute('cx', x.toFixed(1)); d.setAttribute('cy', y.toFixed(1));
+      d.setAttribute('r', '5'); d.setAttribute('fill', '#0d1117');
+      d.setAttribute('stroke', LC); d.setAttribute('stroke-width', '1.5');
+      svg.appendChild(d);
+    }
+
+    function mkText(x, y, text, anchor, size = 14, style = 'normal') {
+      const el = mkEl('text');
+      el.setAttribute('x', x.toFixed(1)); el.setAttribute('y', y.toFixed(1));
+      el.setAttribute('fill', LC);
+      el.setAttribute('stroke', '#0d1117');
+      el.setAttribute('stroke-width', '4');
+      el.setAttribute('paint-order', 'stroke');
+      el.setAttribute('font-size', String(size));
+      el.setAttribute('font-weight', '600');
+      el.setAttribute('font-style', style);
+      el.setAttribute('font-family', FONT);
+      el.setAttribute('text-anchor', anchor);
+      el.setAttribute('dominant-baseline', 'middle');
+      el.textContent = text;
+      svg.appendChild(el);
+    }
+
+    // Entrance — base + 20,000 Hz (two leaders from same point)
+    const [bx, by] = pt(0);
+    mkDot(bx, by);
+    mkLeader(bx, by, bx + 28, by - 40);
+    mkText(bx + 33, by - 40, 'base', 'start', 14, 'italic');
+    mkLeader(bx, by, bx + 28, by + 34);
+    mkText(bx + 33, by + 34, '20,000 Hz', 'start');
+
+    // 4,000 Hz — left side
+    const [p4x, p4y] = pt(freqToT(4000));
+    mkDot(p4x, p4y);
+    mkLeader(p4x, p4y, p4x - 44, p4y);
+    mkText(p4x - 49, p4y, '4,000 Hz', 'end');
+
+    // 1,500 Hz — upper right (second loop)
+    const [p15x, p15y] = pt(freqToT(1500));
+    mkDot(p15x, p15y);
+    mkLeader(p15x, p15y, p15x + 10, p15y - 44);
+    mkText(p15x + 10, p15y - 50, '1,500 Hz', 'middle');
+
+    // 20 Hz — short leader up to the pole (whitespace at centre of innermost loop)
+    mkLeader(ax, ay, 248, 230);
+    mkText(248, 218, '20 Hz', 'middle');
+    // apex — just below the label, still inside the loop
+    mkText(248, 232, 'apex', 'middle', 11, 'italic');
+  }
+
+  // ── Frequency resolution bars ─────────────────────────────────────────────
+  function buildResSlide(container) {
+    const REACH = 0.625; // CI array covers ~450° of the 720° cochlea
+    const rows = [
+      { label: 'Normal Hearing', sub: '~3,500 hair cells', n: 64, reach: 1.0   },
+      { label: '24 Channels',    sub: 'High',              n: 24, reach: REACH },
+      { label: '12 Channels',    sub: 'Typical CI',        n: 12, reach: REACH },
+      { label: '4 Channels',     sub: 'Low',               n:  4, reach: REACH },
+    ];
+    rows.forEach(row => {
+      const rowEl = document.createElement('div');
+      rowEl.className = 'res-row';
+
+      const lbl = document.createElement('div');
+      lbl.className = 'res-label';
+      lbl.innerHTML = `<strong>${row.label}</strong>${row.sub}`;
+      rowEl.appendChild(lbl);
+
+      const bar = document.createElement('div');
+      bar.className = 'res-bar';
+      // Hue maps to absolute position in the full cochlea so CI rows
+      // stop at yellow-green (the bass/red end is unreachable).
+      for (let i = 0; i < row.n; i++) {
+        const seg = document.createElement('div');
+        seg.className = 'res-bar-seg';
+        const hue = 270 - ((i + 0.5) / row.n) * row.reach * 270;
+        seg.style.background = `hsl(${hue},90%,58%)`;
+        bar.appendChild(seg);
+      }
+      // Dark tail representing the uncovered bass region
+      if (row.reach < 1.0) {
+        const tail = document.createElement('div');
+        tail.className = 'res-bar-seg';
+        tail.style.flex = String(row.n * (1 - row.reach) / row.reach);
+        tail.style.background = '#21262d';
+        bar.appendChild(tail);
+      }
+      rowEl.appendChild(bar);
+      container.appendChild(rowEl);
+    });
+  }
+
+  // ── CI device schematic ───────────────────────────────────────────────────
+  function drawCIDevice(svg) {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+    const FONT = '-apple-system, BlinkMacSystemFont, Helvetica, sans-serif';
+    const HCX = 188, HCY = 185, HRX = 132, HRY = 150;
+    const HEAD_RIGHT = HCX + HRX; // 320
+
+    // Head silhouette (skull interior)
+    const head = mkEl('ellipse');
+    head.setAttribute('cx', String(HCX)); head.setAttribute('cy', String(HCY));
+    head.setAttribute('rx', String(HRX)); head.setAttribute('ry', String(HRY));
+    head.setAttribute('fill', '#161b22');
+    head.setAttribute('stroke', '#8b949e'); head.setAttribute('stroke-width', '2.5');
+    svg.appendChild(head);
+
+    // Ear
+    const ear = mkEl('ellipse');
+    ear.setAttribute('cx', String(HEAD_RIGHT + 7)); ear.setAttribute('cy', String(HCY + 8));
+    ear.setAttribute('rx', '12'); ear.setAttribute('ry', '18');
+    ear.setAttribute('fill', '#1c2128');
+    ear.setAttribute('stroke', '#8b949e'); ear.setAttribute('stroke-width', '1.5');
+    svg.appendChild(ear);
+
+    // ── Transmitter coil (external, sits on skull surface) ───────────
+    const COIL_X = HEAD_RIGHT, COIL_Y = HCY - 18;
+    const coilOuter = mkEl('circle');
+    coilOuter.setAttribute('cx', String(COIL_X)); coilOuter.setAttribute('cy', String(COIL_Y));
+    coilOuter.setAttribute('r', '20');
+    coilOuter.setAttribute('fill', 'rgba(121,184,255,0.12)');
+    coilOuter.setAttribute('stroke', '#79b8ff'); coilOuter.setAttribute('stroke-width', '3.5');
+    svg.appendChild(coilOuter);
+    const coilInner = mkEl('circle');
+    coilInner.setAttribute('cx', String(COIL_X)); coilInner.setAttribute('cy', String(COIL_Y));
+    coilInner.setAttribute('r', '9');
+    coilInner.setAttribute('fill', 'none');
+    coilInner.setAttribute('stroke', '#79b8ff'); coilInner.setAttribute('stroke-width', '2');
+    svg.appendChild(coilInner);
+
+    // ── External processor (BTE unit) ─────────────────────────────────
+    const PROC_X = HEAD_RIGHT + 32, PROC_Y = HCY - 83;
+    const proc = mkEl('rect');
+    proc.setAttribute('x', String(PROC_X)); proc.setAttribute('y', String(PROC_Y));
+    proc.setAttribute('width', '62'); proc.setAttribute('height', '100');
+    proc.setAttribute('rx', '14');
+    proc.setAttribute('fill', '#1a2030');
+    proc.setAttribute('stroke', '#79b8ff'); proc.setAttribute('stroke-width', '2');
+    svg.appendChild(proc);
+    // Mic symbol
+    const micBg = mkEl('circle');
+    micBg.setAttribute('cx', String(PROC_X + 31)); micBg.setAttribute('cy', String(PROC_Y + 22));
+    micBg.setAttribute('r', '8');
+    micBg.setAttribute('fill', 'rgba(121,184,255,0.2)');
+    micBg.setAttribute('stroke', '#79b8ff'); micBg.setAttribute('stroke-width', '1.5');
+    svg.appendChild(micBg);
+    const micDot = mkEl('circle');
+    micDot.setAttribute('cx', String(PROC_X + 31)); micDot.setAttribute('cy', String(PROC_Y + 22));
+    micDot.setAttribute('r', '3'); micDot.setAttribute('fill', '#79b8ff');
+    svg.appendChild(micDot);
+    // Wire: processor → coil
+    const extWire = mkEl('path');
+    extWire.setAttribute('d', `M${PROC_X},${PROC_Y + 58} L${COIL_X + 20},${COIL_Y}`);
+    extWire.setAttribute('stroke', '#79b8ff'); extWire.setAttribute('stroke-width', '2');
+    extWire.setAttribute('fill', 'none');
+    svg.appendChild(extWire);
+
+    // "skin boundary" label
+    const skinLbl = mkEl('text');
+    skinLbl.setAttribute('x', String(HEAD_RIGHT + 8)); skinLbl.setAttribute('y', String(HCY + 85));
+    skinLbl.setAttribute('fill', '#484f58'); skinLbl.setAttribute('font-size', '10');
+    skinLbl.setAttribute('font-style', 'italic'); skinLbl.setAttribute('font-family', FONT);
+    skinLbl.textContent = 'skin boundary';
+    svg.appendChild(skinLbl);
+
+    // ── Internal receiver (implanted in bone) ─────────────────────────
+    const RCV_X = HCX + 38, RCV_Y = HCY - 74;
+    const rcv = mkEl('rect');
+    rcv.setAttribute('x', String(RCV_X)); rcv.setAttribute('y', String(RCV_Y));
+    rcv.setAttribute('width', '65'); rcv.setAttribute('height', '42');
+    rcv.setAttribute('rx', '9');
+    rcv.setAttribute('fill', '#1a1200');
+    rcv.setAttribute('stroke', '#f0c844'); rcv.setAttribute('stroke-width', '2');
+    svg.appendChild(rcv);
+    // Dashed coupling line: coil → receiver
+    const coupling = mkEl('line');
+    coupling.setAttribute('x1', String(COIL_X - 20)); coupling.setAttribute('y1', String(COIL_Y));
+    coupling.setAttribute('x2', String(RCV_X + 65)); coupling.setAttribute('y2', String(RCV_Y + 21));
+    coupling.setAttribute('stroke', '#f0c844'); coupling.setAttribute('stroke-width', '1.5');
+    coupling.setAttribute('stroke-dasharray', '5,3');
+    svg.appendChild(coupling);
+
+    // ── Wire: receiver → cochlea ──────────────────────────────────────
+    const COCH_X = HCX - 20, COCH_Y = HCY + 62;
+    const intWire = mkEl('path');
+    intWire.setAttribute('d', `M${RCV_X + 32},${RCV_Y + 42} C${RCV_X + 32},${COCH_Y - 22} ${COCH_X + 48},${COCH_Y - 16} ${COCH_X},${COCH_Y}`);
+    intWire.setAttribute('stroke', '#f0c844'); intWire.setAttribute('stroke-width', '2.5');
+    intWire.setAttribute('fill', 'none'); intWire.setAttribute('stroke-linecap', 'round');
+    svg.appendChild(intWire);
+
+    // ── Mini cochlea (CI coloring — absolute position, stops at 62.5%) ──
+    const MR_MAX = 26, MR_MIN = 6, MTM = 2 * 2 * Math.PI, MSEGS = 100, REACH = 0.625;
+    for (let i = 0; i < MSEGS; i++) {
+      const t0 = (i / MSEGS) * MTM, t1 = ((i + 1) / MSEGS) * MTM;
+      const r0 = MR_MIN + (MR_MAX - MR_MIN) * (1 - t0 / MTM);
+      const r1 = MR_MIN + (MR_MAX - MR_MIN) * (1 - t1 / MTM);
+      const x0 = COCH_X + r0 * Math.cos(t0), y0 = COCH_Y + r0 * Math.sin(t0);
+      const x1 = COCH_X + r1 * Math.cos(t1), y1 = COCH_Y + r1 * Math.sin(t1);
+      const hue = 270 - (t0 / MTM) * 270;
+      const seg = mkEl('line');
+      seg.setAttribute('x1', x0.toFixed(1)); seg.setAttribute('y1', y0.toFixed(1));
+      seg.setAttribute('x2', x1.toFixed(1)); seg.setAttribute('y2', y1.toFixed(1));
+      seg.setAttribute('stroke', t0 <= MTM * REACH ? `hsl(${hue},90%,60%)` : '#21262d');
+      seg.setAttribute('stroke-width', '5'); seg.setAttribute('stroke-linecap', 'round');
+      svg.appendChild(seg);
+    }
+    // Electrode dots
+    for (let i = 0; i < 6; i++) {
+      const tMid = MTM * REACH * (i + 0.5) / 6;
+      const r = MR_MIN + (MR_MAX - MR_MIN) * (1 - tMid / MTM);
+      const ex = COCH_X + r * Math.cos(tMid), ey = COCH_Y + r * Math.sin(tMid);
+      const hue = 270 - (tMid / MTM) * 270;
+      const dot = mkEl('circle');
+      dot.setAttribute('cx', ex.toFixed(1)); dot.setAttribute('cy', ey.toFixed(1));
+      dot.setAttribute('r', '3.5');
+      dot.setAttribute('fill', `hsl(${hue},90%,65%)`);
+      dot.setAttribute('stroke', '#0d1117'); dot.setAttribute('stroke-width', '1');
+      svg.appendChild(dot);
+    }
+
+    // ── Numbered badges ───────────────────────────────────────────────
+    function mkBadge(x, y, num, color) {
+      const bg = mkEl('circle');
+      bg.setAttribute('cx', String(x)); bg.setAttribute('cy', String(y));
+      bg.setAttribute('r', '12');
+      bg.setAttribute('fill', '#0d1117'); bg.setAttribute('stroke', color); bg.setAttribute('stroke-width', '2');
+      svg.appendChild(bg);
+      const t = mkEl('text');
+      t.setAttribute('x', String(x)); t.setAttribute('y', String(y));
+      t.setAttribute('fill', color); t.setAttribute('font-size', '12'); t.setAttribute('font-weight', '700');
+      t.setAttribute('text-anchor', 'middle'); t.setAttribute('dominant-baseline', 'middle');
+      t.setAttribute('font-family', FONT);
+      t.textContent = String(num);
+      svg.appendChild(t);
+    }
+    mkBadge(PROC_X + 31, PROC_Y - 16, 1, '#79b8ff');
+    mkBadge(COIL_X + 26, COIL_Y + 20, 2, '#79b8ff');
+    mkBadge(RCV_X + 32, RCV_Y - 16, 3, '#f0c844');
+    mkBadge(COCH_X - 32, COCH_Y + 14, 4, '#56d364');
+  }
+
+  Reveal.on('ready', () => {
+    drawCochleaLabeled(document.getElementById('cochleaNormal'));
+    drawCIDevice(document.getElementById('ciDevice'));
+    drawSpiral(document.getElementById('cochleaFull'),   false);
+    drawSpiral(document.getElementById('cochleaCI'),     true, 12);
+    buildHairCells(document.getElementById('hairHealthy'), false);
+    buildHairCells(document.getElementById('hairDamaged'), true);
+    buildResSlide(document.getElementById('resSlide'));
+  });
+</script>
+</body>
+</html>
