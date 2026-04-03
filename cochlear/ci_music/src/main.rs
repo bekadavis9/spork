@@ -1,9 +1,7 @@
 mod audio;
-mod bands;
-mod filter;
 mod server;
-mod vocoder;
 
+use ci_music::vocoder;
 use clap::{Parser, Subcommand};
 use std::time::Instant;
 

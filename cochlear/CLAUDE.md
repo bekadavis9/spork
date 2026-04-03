@@ -20,16 +20,33 @@ cargo run -- serve --port 3001
 cargo test
 cargo test <test_name>      # run a single test
 cargo clippy
+
+# WASM build for GitHub Pages (requires wasm-pack)
+wasm-pack build --target web --out-dir ../_site/pkg
 ```
 
 CLI flags for `process`: `--channels` (default 8), `--strategy cis|fs4|fft` (default `cis`), `--carrier noise|sine` (default `noise`), `--verbose`.
 
 ## Architecture
 
-Primary pipeline (CIS/FS4): load audio (via Symphonia) → downmix mono → 4th-order IIR bandpass per band → rectify → 400 Hz lowpass envelope → multiply carrier → sum → write WAV. FFT strategy uses Hann-windowed overlap-add (1024-sample frames, 512-sample hop) as a comparison baseline — not a realistic CI simulation.
+The `ci_music` crate has two targets:
+- **`[lib]`** (`src/lib.rs`): exports vocoder/filter/bands modules and the `process_audio` WASM entry point
+- **`[[bin]]`** (`src/main.rs`): CLI + local axum web server, depends on the lib
+
+Primary pipeline (CIS/FS4): load audio → downmix mono → 4th-order IIR bandpass per band → rectify → 400 Hz lowpass envelope → multiply carrier → sum → write WAV. FFT strategy uses Hann-windowed overlap-add (1024-sample frames, 512-sample hop) as a comparison baseline — not a realistic CI simulation.
 
 **FS4 vs CIS:** Apical channels (center freq ≤ 950 Hz) use zero-crossing-driven sine carriers to preserve pitch; basal channels use standard CIS envelope coding.
 
-Crates: `hound` (WAV write), `symphonia` (multi-format decode: WAV/MP3/FLAC/OGG/AAC/M4A), `rustfft` (FFT, used by fft strategy only), `clap` (CLI), `axum` + `tokio` (web server).
+**Two UIs:**
+- `src/index.html` — local server UI, served by axum via `include_str!`; POSTs audio to `POST /simulate`, which decodes via Symphonia and processes server-side
+- `web/index.html` — GitHub Pages UI; loads the WASM lib, decodes audio via `AudioContext.decodeAudioData`, processes entirely in-browser via WASM
 
-Source layout: `main.rs` (`process`/`serve` subcommands), `server.rs` (axum routes + `POST /simulate`), `index.html` (web UI, embedded via `include_str!`), `audio.rs` (multi-format decode via Symphonia), `vocoder.rs` (all three strategies + WAV encode), `filter.rs` (biquad IIR: 4th-order bandpass + lowpass), `bands.rs` (log-spaced band edge/center frequency math).
+**GitHub Pages deployment:** `.github/workflows/pages.yml` builds with wasm-pack and deploys on every push to `main`. Enable in repo Settings → Pages → Source → GitHub Actions.
+
+**Multi-channel downmix:** Both the local server (Symphonia) and the GitHub Pages build (Web Audio API + JS) downmix to mono by averaging all channels arithmetically, producing identical results for the same input.
+
+**Carrier:** Always noise in both web UIs; sine is CLI-only (`--carrier sine`). **Default channels:** CLI defaults to 8; both web UIs default to 4 (more dramatic first impression). **Case sensitivity:** CLI lowercases strategy/carrier before matching; `run_vocoder`/`process_audio` match case-sensitively — web UIs always send lowercase so no practical difference.
+
+Crates: `hound` + `rustfft` (all targets), `symphonia` + `clap` + `axum` + `tokio` (native only), `wasm-bindgen` (WASM only).
+
+Source layout: `lib.rs` (library root + WASM entry point), `main.rs` (`process`/`serve` subcommands), `server.rs` (axum routes + `POST /simulate`), `index.html` (local server UI), `audio.rs` (Symphonia decode, native only), `vocoder.rs` (all three strategies + WAV encode), `filter.rs` (biquad IIR), `bands.rs` (log-spaced frequencies). GitHub Pages source: `web/index.html`.

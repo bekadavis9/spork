@@ -6,6 +6,7 @@ use axum::{
     response::{Html, IntoResponse, Response},
     routing::{get, post},
 };
+use ci_music::vocoder;
 use tokio::net::TcpListener;
 
 const INDEX_HTML: &str = include_str!("index.html");
@@ -35,7 +36,7 @@ async fn simulate_handler(mut multipart: Multipart) -> Response {
     let mut audio_bytes: Vec<u8> = Vec::new();
     let mut audio_ext: Option<String> = None;
     let mut channels: usize = 8;
-    let mut strategy = crate::vocoder::Strategy::Cis;
+    let mut strategy = vocoder::Strategy::Cis;
 
     while let Ok(Some(field)) = multipart.next_field().await {
         match field.name() {
@@ -58,9 +59,9 @@ async fn simulate_handler(mut multipart: Multipart) -> Response {
             Some("strategy") => {
                 if let Ok(text) = field.text().await {
                     strategy = match text.trim() {
-                        "fs4" => crate::vocoder::Strategy::Fs4,
-                        "fft" => crate::vocoder::Strategy::Fft,
-                        _ => crate::vocoder::Strategy::Cis,
+                        "fs4" => vocoder::Strategy::Fs4,
+                        "fft" => vocoder::Strategy::Fft,
+                        _ => vocoder::Strategy::Cis,
                     };
                 }
             }
@@ -75,8 +76,8 @@ async fn simulate_handler(mut multipart: Multipart) -> Response {
     // Offload CPU-bound processing off the async executor
     let result = tokio::task::spawn_blocking(move || {
         crate::audio::decode_audio_bytes(&audio_bytes, audio_ext.as_deref()).and_then(|(samples, rate)| {
-            let output = crate::vocoder::process(&samples, rate, channels, strategy, crate::vocoder::Carrier::Noise);
-            crate::vocoder::encode_wav_bytes(&output, rate)
+            let output = vocoder::process(&samples, rate, channels, strategy, vocoder::Carrier::Noise);
+            vocoder::encode_wav_bytes(&output, rate)
         })
     })
     .await
@@ -107,7 +108,7 @@ mod server_tests {
         let signal: Vec<f32> = (0..4410)
             .map(|i| (2.0 * std::f32::consts::PI * 440.0 * i as f32 / 44100.0).sin())
             .collect();
-        crate::vocoder::encode_wav_bytes(&signal, 44100).expect("test WAV encode failed")
+        vocoder::encode_wav_bytes(&signal, 44100).expect("test WAV encode failed")
     }
 
     /// Build a multipart/form-data POST body for /simulate.

@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>As Heard Through a Cochlear Implant</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      min-height: 100vh;
+      padding: 28px 20px 60px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .container { width: 100%; max-width: 680px; }
+
+    header { text-align: center; margin-bottom: 16px; }
+    h1 { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; }
+
+    /* Panel: connected card stack */
+    .panel {
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .card {
+      background: #161b22;
+      padding: 24px 28px;
+      border-bottom: 1px solid #30363d;
+    }
+    .panel .card:last-child { border-bottom: none; }
+    .section-label {
+      font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; color: #8b949e; margin-bottom: 14px;
+    }
+    .card-divider { height: 1px; background: #30363d; margin: 22px 0; }
+
+    /* ── Cochlea explainer card ─────────────────────────────────────────── */
+    .cochlea-card { text-align: center; }
+    #cochleaSvg { width: 100%; max-width: 240px; height: auto; display: block; margin: 0 auto; }
+    .freq-ticks { position: relative; height: 18px; margin-top: 10px; }
+    .freq-tick-lbl {
+      position: absolute; transform: translateX(-50%);
+      font-size: 0.62rem; color: #8b949e; white-space: nowrap; line-height: 18px;
+    }
+    .freq-bar {
+      display: flex; height: 18px; border-radius: 4px; overflow: hidden;
+      gap: 2px; background: #30363d; margin-top: 4px;
+    }
+    .freq-bar-seg { flex: 1; }
+    .freq-bar-labels { display: flex; justify-content: space-between; margin-top: 6px; }
+    .freq-bar-labels span { font-size: 0.7rem; color: #8b949e; }
+    .cochlea-explainer {
+      font-size: 0.82rem; color: #8b949e; line-height: 1.6;
+      max-width: 500px; margin: 0 auto 20px;
+    }
+    .cochlea-caption {
+      margin-top: 10px; font-size: 0.82rem; color: #8b949e;
+      line-height: 1.5;
+    }
+    .caption-title {
+      display: block; margin-bottom: 2px; color: #c9d1d9; font-size: 0.85rem;
+    }
+    .caption-title strong { font-weight: 600; }
+
+    /* ── Drop zone ──────────────────────────────────────────────────────── */
+    .drop-zone {
+      border: 2px dashed #30363d; border-radius: 8px;
+      padding: 20px; text-align: center; cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .drop-zone:hover { border-color: #58a6ff; background: rgba(88,166,255,0.04); }
+    .drop-zone.over  { border-color: #58a6ff; background: rgba(88,166,255,0.08); }
+    .dz-icon { font-size: 1.8rem; margin-bottom: 8px; }
+    .dz-hint { color: #8b949e; font-size: 0.85rem; }
+
+    /* ── Compact file row (replaces drop zone after pick) ────────────────── */
+    .file-row { display: none; }
+    .file-row-meta {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .file-row-name {
+      font-weight: 600; font-size: 0.88rem; color: #3fb950;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80%;
+    }
+    .file-row-change {
+      font-size: 0.75rem; color: #8b949e; background: none;
+      border: 1px solid #30363d; border-radius: 6px; padding: 3px 10px;
+      cursor: pointer; font-family: inherit; white-space: nowrap;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .file-row-change:hover { border-color: #8b949e; color: #e6edf3; }
+    .file-row audio { width: 100%; }
+
+    /* ── Strategy selector ──────────────────────────────────────────────── */
+    .era-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .era-row {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 4px; padding: 16px 12px; background: #0d1117;
+      border: 1px solid #30363d; border-top: 3px solid transparent; border-radius: 8px;
+      color: #e6edf3; cursor: pointer; text-align: center;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .era-row:hover:not(.active) { border-color: #484f58; border-top-color: #484f58; }
+    .era-name { font-size: 0.93rem; font-weight: 700; }
+    .era-desc { font-size: 0.78rem; color: #8b949e; }
+    .era-row[data-strat="cis"].active {
+      background: rgba(210,153,34,0.07); border-color: rgba(210,153,34,0.3); border-top-color: #d29922;
+    }
+    .era-row[data-strat="cis"].active .era-name { color: #f0c844; }
+    .era-row[data-strat="fs4"].active {
+      background: rgba(88,166,255,0.07); border-color: rgba(88,166,255,0.3); border-top-color: #58a6ff;
+    }
+    .era-row[data-strat="fs4"].active .era-name { color: #79b8ff; }
+
+    /* ── Channel selector ───────────────────────────────────────────────── */
+    .ch-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; max-width: 480px; margin: 0 auto; }
+    .ch-btn {
+      background: #0d1117; border: 1px solid #30363d; border-radius: 8px;
+      color: #e6edf3; cursor: pointer; padding: 14px 8px; text-align: center;
+      transition: all 0.15s;
+    }
+    .ch-btn:hover:not(.active) { border-color: #8b949e; }
+    .ch-btn.active { background: #1f4a8f; border-color: #58a6ff; }
+    .ch-num   { display: block; font-size: 1.35rem; font-weight: 700; line-height: 1; }
+    .ch-label { display: block; font-size: 0.68rem; color: #8b949e; margin-top: 5px; }
+    .ch-btn.active .ch-label { color: #a5c8ff; }
+
+    /* ── A/B toggle ─────────────────────────────────────────────────────── */
+    .ab-toggle {
+      display: flex; border: 1px solid #30363d; border-radius: 8px;
+      overflow: hidden; margin-bottom: 16px;
+    }
+    .ab-btn {
+      flex: 1; padding: 10px 8px; text-align: center;
+      font-size: 0.82rem; font-weight: 600; letter-spacing: 0.02em;
+      cursor: pointer; background: none; color: #8b949e;
+      border: none; font-family: inherit;
+      transition: background 0.15s, color 0.15s;
+    }
+    .ab-btn + .ab-btn { border-left: 1px solid #30363d; }
+    .ab-btn.ab-active { background: #1f4a8f; color: #e6edf3; }
+    .ab-btn:hover:not(.ab-active) { background: rgba(255,255,255,0.04); color: #c9d1d9; }
+
+    /* ── Download button (matches Change file style) ───────────────────── */
+    .file-row-download {
+      font-size: 0.75rem; color: #8b949e; background: none;
+      border: 1px solid #30363d; border-radius: 6px; padding: 3px 10px;
+      cursor: pointer; font-family: inherit; white-space: nowrap;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .file-row-download:hover { border-color: #8b949e; color: #e6edf3; }
+
+    /* ── Audio mode: grey out settings when original is playing ─────────── */
+    .playing-original .ch-btn.active {
+      background: rgba(139,148,158,0.08); border-color: rgba(139,148,158,0.25);
+    }
+    .playing-original .ch-btn.active .ch-num  { color: #6e7681; }
+    .playing-original .ch-btn.active .ch-label { color: #6e7681; }
+    .playing-original .era-row[data-strat="cis"].active,
+    .playing-original .era-row[data-strat="fs4"].active {
+      background: rgba(139,148,158,0.05);
+      border-color: rgba(139,148,158,0.2); border-top-color: rgba(139,148,158,0.35);
+    }
+    .playing-original .era-row.active .era-name { color: #6e7681; }
+
+    /* ── Sim card states ────────────────────────────────────────────────── */
+    .sim-idle {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 52px; color: #484f58; font-size: 0.88rem;
+    }
+    .sim-loading {
+      display: none; align-items: center; gap: 12px;
+      min-height: 52px; color: #8b949e; font-size: 0.88rem;
+    }
+    .sim-loading.show { display: flex; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .sim-spinner {
+      width: 18px; height: 18px; flex-shrink: 0;
+      border: 2px solid #30363d; border-top-color: #58a6ff;
+      border-radius: 50%; animation: spin 0.7s linear infinite;
+    }
+    .sim-result { display: none; }
+    .sim-result.show { display: block; }
+
+    /* Accent stripe on sim card once result is ready */
+    .card.has-result { position: relative; overflow: hidden; }
+    .card.has-result::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: #58a6ff;
+    }
+
+    /* Subtle spinner next to label while re-processing */
+    .card.sim-updating .section-label::after {
+      content: '';
+      display: inline-block; vertical-align: middle;
+      width: 10px; height: 10px; margin-left: 8px;
+      border: 1.5px solid #30363d; border-top-color: #58a6ff;
+      border-radius: 50%; animation: spin 0.7s linear infinite;
+    }
+
+    .error {
+      margin-top: 12px; padding: 12px 16px; display: none;
+      background: rgba(248,81,73,0.1); border: 1px solid #f85149;
+      border-radius: 6px; color: #f85149; font-size: 0.88rem;
+    }
+    .error.show { display: block; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>As Heard Through a Cochlear Implant</h1>
+  </header>
+
+  <div class="panel">
+
+    <!-- Card 0: Cochlea explainer -->
+    <div class="card cochlea-card">
+<svg id="cochleaSvg" viewBox="0 0 260 260"></svg>
+      <div class="freq-ticks" id="freqTicks"></div>
+      <div class="freq-bar" id="freqBar"></div>
+      <div class="freq-bar-labels">
+        <span>Bass</span>
+        <span>Treble</span>
+      </div>
+      <p class="cochlea-caption" id="cochleaCaption"></p>
+    </div>
+
+    <!-- Card 1: Original Audio -->
+    <div class="card">
+      <div class="section-label">Original Audio</div>
+
+      <div class="drop-zone" id="dz">
+        <div class="dz-icon">🎵</div>
+        <div class="dz-hint">Drop an audio file here, or click to browse</div>
+      </div>
+      <input type="file" id="fileInput" accept=".wav,.mp3,.flac,.ogg,.aac,.m4a,audio/*" style="display:none">
+
+      <div class="file-row" id="fileRow">
+        <div class="file-row-meta">
+          <span class="file-row-name" id="fileRowName"></span>
+          <button class="file-row-change" onclick="document.getElementById('fileInput').click()">Change file</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2: Settings -->
+    <div class="card" id="settingsCard">
+      <div class="section-label">CI Generation</div>
+      <div class="era-list">
+        <button class="era-row active" data-strat="cis" onclick="setStrat('cis')">
+          <span class="era-name">Classic CI</span>
+          <span class="era-desc">Rhythm preserved, pitch stripped</span>
+        </button>
+        <button class="era-row" data-strat="fs4" onclick="setStrat('fs4')">
+          <span class="era-name">Advanced CI</span>
+          <span class="era-desc">Low-frequency pitch preserved</span>
+        </button>
+      </div>
+
+      <div class="card-divider"></div>
+
+      <div class="section-label">Frequency Channels</div>
+      <div class="ch-grid">
+        <button class="ch-btn active" onclick="setCh(4)">
+          <span class="ch-num">4</span><span class="ch-label">low</span>
+        </button>
+        <button class="ch-btn" onclick="setCh(12)">
+          <span class="ch-num">12</span><span class="ch-label">typical</span>
+        </button>
+        <button class="ch-btn" onclick="setCh(24)">
+          <span class="ch-num">24</span><span class="ch-label">high</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Card 3: CI Simulation result -->
+    <div class="card" id="simCard">
+      <div class="section-label">Simulated Audio</div>
+
+      <div class="sim-idle" id="simIdle">Upload an audio file to begin</div>
+
+      <div class="sim-loading" id="simLoading">
+        <div class="sim-spinner"></div>
+        <span id="simLoadingText">Processing…</span>
+      </div>
+
+      <div class="sim-result" id="simResult">
+        <div class="ab-toggle">
+          <button class="ab-btn" id="btnOrig" onclick="setAbMode('original')">Original</button>
+          <button class="ab-btn ab-active" id="btnSim" onclick="setAbMode('sim')">CI Simulation</button>
+        </div>
+        <audio id="player" controls style="width:100%"></audio>
+        <div class="file-row-meta" style="margin-top:12px">
+          <span class="file-row-name" id="simFileName"></span>
+          <button id="dlBtn" class="file-row-download">↓ Download</button>
+        </div>
+      </div>
+
+      <div class="error" id="err"></div>
+    </div>
+
+  </div><!-- /.panel -->
+
+</div>
+<script type="module">
+  import init, { process_audio } from './pkg/ci_music.js';
+
+  // ── WASM initialisation ───────────────────────────────────────────────────
+  // Start loading WASM immediately; doSimulate awaits this before processing.
+  const wasmReady = init();
+
+  // ── AudioContext (one per page load) ─────────────────────────────────────
+  // Created once and reused across all simulate calls. Creating a new
+  // AudioContext on every call causes browser warnings after ~6 instances.
+  // decodeAudioData works even when the context is suspended (before user
+  // interaction resumes it), so creating it at module scope is safe.
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  // ── File save helper ─────────────────────────────────────────────────────
+  async function saveFile(blob, suggestedName) {
+    if (window.showSaveFilePicker) {
+      try {
+        const handle = await window.showSaveFilePicker({
+          suggestedName,
+          types: [{ description: 'Audio', accept: { 'audio/*': ['.wav', '.mp3', '.flac', '.ogg', '.aac', '.m4a'] } }],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+        return;
+      } catch (e) {
+        if (e.name === 'AbortError') return;
+      }
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = suggestedName; a.click();
+  }
+
+  // ── App state ────────────────────────────────────────────────────────────
+  let file      = null;
+  let channels  = 4;
+  let strategy  = 'cis';
+  let abMode    = 'sim';
+  let origSrc   = null;
+  let simSrc    = null;
+  let simReady  = false;
+  let _hasResult  = false;
+  let _simTimer   = null;
+
+  // ── File input ───────────────────────────────────────────────────────────
+  const dz = document.getElementById('dz');
+  const fi = document.getElementById('fileInput');
+
+  dz.addEventListener('click', () => fi.click());
+  ['dragover','dragenter'].forEach(ev =>
+    dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('over'); }));
+  ['dragleave','dragend'].forEach(ev =>
+    dz.addEventListener(ev, () => dz.classList.remove('over')));
+  dz.addEventListener('drop', e => {
+    e.preventDefault(); dz.classList.remove('over');
+    if (e.dataTransfer.files[0]) pick(e.dataTransfer.files[0]);
+  });
+  fi.addEventListener('change', () => fi.files[0] && pick(fi.files[0]));
+
+  function pick(f) {
+    file = f;
+    dz.style.display = 'none';
+    document.getElementById('fileRow').style.display = 'block';
+    document.getElementById('fileRowName').textContent = f.name;
+    if (origSrc) URL.revokeObjectURL(origSrc);
+    origSrc = URL.createObjectURL(f);
+    simReady = false;
+    _hasResult = false;
+    simSrc = null;
+    scheduleSimulate(0);
+  }
+
+  // ── A/B toggle ───────────────────────────────────────────────────────────
+  const playerEl     = document.getElementById('player');
+  const settingsCard = document.getElementById('settingsCard');
+
+  function setAbMode(mode) {
+    const pos        = playerEl.currentTime;
+    const wasPlaying = !playerEl.paused;
+    abMode = mode;
+
+    const src = mode === 'original' ? origSrc : simSrc;
+    if (src && src !== playerEl.src) {
+      playerEl.src = src;
+      playerEl.load();
+      playerEl.addEventListener('canplaythrough', () => {
+        playerEl.currentTime = Math.min(pos, playerEl.duration || 0);
+        if (wasPlaying) playerEl.play().catch(() => {});
+      }, { once: true });
+    }
+
+    document.getElementById('btnOrig').classList.toggle('ab-active', mode === 'original');
+    document.getElementById('btnSim').classList.toggle('ab-active', mode === 'sim');
+    buildCochlea(mode === 'original' ? null : channels);
+    updateSettingsColor();
+  }
+
+  // ── Sim card state machine ───────────────────────────────────────────────
+  function setSimState(state) {
+    document.getElementById('simIdle').style.display    = state === 'idle'    ? 'flex'  : 'none';
+    document.getElementById('simLoading').style.display = state === 'loading' ? 'flex'  : 'none';
+    document.getElementById('simResult').style.display  = state === 'ready'   ? 'block' : 'none';
+    document.getElementById('simCard').classList.toggle('has-result', state === 'ready');
+  }
+
+  // ── Simulation ───────────────────────────────────────────────────────────
+  function scheduleSimulate(delay = 200) {
+    if (!file) return;
+    clearTimeout(_simTimer);
+    _simTimer = setTimeout(doSimulate, delay);
+  }
+
+  function setUpdating(on) {
+    document.getElementById('simCard').classList.toggle('sim-updating', on);
+  }
+
+  function updateSettingsColor() {
+    settingsCard.classList.toggle('playing-original', !simReady || abMode === 'original');
+  }
+
+  async function doSimulate() {
+    if (!file) return;
+
+    const pos        = _hasResult ? playerEl.currentTime : 0;
+    const wasPlaying = _hasResult && abMode === 'sim' && !playerEl.paused;
+
+    if (_hasResult) {
+      setUpdating(true);
+    } else {
+      setSimState('loading');
+    }
+
+    document.getElementById('err').classList.remove('show');
+
+    try {
+      // Wait for WASM to be ready (usually already done by the time user picks a file)
+      document.getElementById('simLoadingText').textContent = 'Loading processor…';
+      await wasmReady;
+
+      // Decode audio file using the browser's built-in Web Audio API
+      document.getElementById('simLoadingText').textContent = 'Decoding audio…';
+      const arrayBuffer = await file.arrayBuffer();
+      const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+
+      // Downmix to mono: arithmetic mean of all channels.
+      // Matches audio.rs (Symphonia): frame.iter().sum() / num_channels.
+      // Handles mono, stereo, and surround (e.g. 5.1) identically to the local server.
+      let samples;
+      const numChannels = audioBuffer.numberOfChannels;
+      if (numChannels === 1) {
+        // Fast path: no copy needed for mono
+        samples = audioBuffer.getChannelData(0);
+      } else {
+        const length = audioBuffer.length;
+        const channelData = Array.from({ length: numChannels }, (_, c) => audioBuffer.getChannelData(c));
+        samples = new Float32Array(length);
+        for (let i = 0; i < length; i++) {
+          let sum = 0;
+          for (let c = 0; c < numChannels; c++) sum += channelData[c][i];
+          samples[i] = sum / numChannels;
+        }
+      }
+
+      // process_audio() is synchronous WASM — it blocks the main thread for the
+      // duration of processing. Yielding here (setTimeout 0) lets the browser
+      // paint the "Processing…" state before we hand control to WASM.
+      document.getElementById('simLoadingText').textContent = 'Processing…';
+      await new Promise(r => setTimeout(r, 20));
+
+      // Run the vocoder in WASM — synchronous, returns WAV bytes.
+      // An empty result means WAV encoding failed on the Rust side (should not
+      // happen in normal operation, but guard here so we don't show a broken player).
+      const wavBytes = process_audio(samples, audioBuffer.sampleRate, channels, strategy, 'noise');
+      if (wavBytes.length === 0) throw new Error('Vocoder returned no audio — WAV encoding failed.');
+      const blob = new Blob([wavBytes], { type: 'audio/wav' });
+
+      if (simSrc) URL.revokeObjectURL(simSrc);
+      simSrc = URL.createObjectURL(blob);
+
+      const ext  = file.name.lastIndexOf('.');
+      const base = ext >= 0 ? file.name.slice(0, ext) : file.name;
+      const simName = `${base}_ci_${channels}ch_${strategy}.wav`;
+      document.getElementById('simFileName').textContent = simName;
+      document.getElementById('dlBtn').onclick = () => saveFile(blob, simName);
+
+      _hasResult = true;
+      simReady   = true;
+      setSimState('ready');
+      setUpdating(false);
+
+      if (abMode === 'sim' || !_hasResult) {
+        playerEl.src = simSrc;
+        playerEl.load();
+        if (wasPlaying) {
+          playerEl.addEventListener('canplaythrough', () => {
+            playerEl.currentTime = Math.min(pos, playerEl.duration || 0);
+            playerEl.play().catch(() => {});
+          }, { once: true });
+        }
+      }
+      abMode = 'sim';
+      document.getElementById('btnOrig').classList.remove('ab-active');
+      document.getElementById('btnSim').classList.add('ab-active');
+      buildCochlea(channels);
+      updateSettingsColor();
+    } catch (e) {
+      document.getElementById('err').textContent = e.message || String(e);
+      document.getElementById('err').classList.add('show');
+      setUpdating(false);
+      if (!_hasResult) setSimState('idle');
+    }
+  }
+
+  // ── Settings ─────────────────────────────────────────────────────────────
+  function setCh(n) {
+    channels = n;
+    document.querySelectorAll('.ch-btn').forEach(b =>
+      b.classList.toggle('active', +b.querySelector('.ch-num').textContent === n));
+    if (abMode === 'sim') buildCochlea(n);
+    updateSettingsColor();
+    scheduleSimulate(150);
+  }
+
+  function setStrat(s) {
+    strategy = s;
+    document.querySelectorAll('.era-row').forEach(b =>
+      b.classList.toggle('active', b.dataset.strat === s));
+    updateSettingsColor();
+    scheduleSimulate(150);
+  }
+
+  // Make settings handlers global (called from inline onclick attributes)
+  window.setCh = setCh;
+  window.setStrat = setStrat;
+  window.setAbMode = setAbMode;
+
+  // ── Cochlea spiral visualization ─────────────────────────────────────────
+  const SVG_CX = 130, SVG_CY = 130, R_MAX = 105, R_MIN = 14;
+  const THETA_MAX = 2.5 * 2 * Math.PI;
+  const K_SP = Math.log(R_MAX / R_MIN) / THETA_MAX;
+  const F_LOW = 70, F_HIGH = 8500;
+
+  function spiralPt(theta) {
+    const r = R_MAX * Math.exp(-K_SP * theta);
+    return [SVG_CX + r * Math.cos(theta), SVG_CY + r * Math.sin(theta)];
+  }
+
+  function bandColor(i, n) {
+    const hue = 20 + 200 * i / Math.max(n - 1, 1);
+    return `hsl(${hue.toFixed(0)},75%,58%)`;
+  }
+
+  function fmtHz(f) {
+    if (f < 1000) return `${Math.round(f / 10) * 10} Hz`;
+    if (f < 2000) return `${(Math.round(f / 100) / 10).toFixed(1)} kHz`;
+    const r = Math.round(f / 500) * 500;
+    return `${r % 1000 === 0 ? r / 1000 : (r / 1000).toFixed(1)} kHz`;
+  }
+
+  function bandFreqs(i, n) {
+    const lo = F_HIGH * Math.pow(F_LOW / F_HIGH, (n - i) / n);
+    const hi = F_HIGH * Math.pow(F_LOW / F_HIGH, (n - 1 - i) / n);
+    return [lo, hi];
+  }
+
+  const CAPTIONS = {
+    4:  { bold: '4 Electrodes',  rest: 'Low',     body: 'Large gaps between electrodes. Rhythm survives; pitch is mostly lost.' },
+    12: { bold: '12 Electrodes', rest: 'Typical', body: 'Today\'s standard CI. Music becomes noticeably more recognizable.' },
+    24: { bold: '24 Electrodes', rest: 'High',    body: 'Near-full cochlear coverage. Pitch and melody begin to return.' },
+  };
+
+  function buildCochlea(n) {
+    const NS = 'http://www.w3.org/2000/svg';
+    const svg = document.getElementById('cochleaSvg');
+    svg.innerHTML = '';
+
+    const full = n === null;
+    const drawN = full ? 48 : n;
+
+    const bgPts = [];
+    for (let i = 0; i <= 360; i++) {
+      const [x, y] = spiralPt(THETA_MAX * i / 360);
+      bgPts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+    }
+    const bg = document.createElementNS(NS, 'polyline');
+    bg.setAttribute('points', bgPts.join(' '));
+    bg.setAttribute('fill', 'none');
+    bg.setAttribute('stroke', '#21262d');
+    bg.setAttribute('stroke-width', '20');
+    bg.setAttribute('stroke-linecap', 'round');
+    bg.setAttribute('stroke-linejoin', 'round');
+    svg.appendChild(bg);
+
+    for (let i = 0; i < drawN; i++) {
+      const t0 = THETA_MAX * (drawN - 1 - i) / drawN;
+      const t1 = THETA_MAX * (drawN - i) / drawN;
+      const steps = Math.max(40, Math.round(80 * (t1 - t0) / THETA_MAX));
+      const pts = [];
+      for (let j = 0; j <= steps; j++) {
+        const [x, y] = spiralPt(t0 + (t1 - t0) * j / steps);
+        pts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+      }
+      const pl = document.createElementNS(NS, 'polyline');
+      pl.setAttribute('points', pts.join(' '));
+      pl.setAttribute('fill', 'none');
+      const tMid = THETA_MAX * (drawN - 0.5 - i) / drawN;
+      const reachable = full || tMid <= THETA_MAX * 0.625;
+      pl.setAttribute('stroke', reachable ? bandColor(i, drawN) : '#2d3748');
+      pl.setAttribute('stroke-width', '14');
+      pl.setAttribute('stroke-linecap', 'round');
+      pl.setAttribute('stroke-linejoin', 'round');
+      const [fLo, fHi] = bandFreqs(i, drawN);
+      const ttl = document.createElementNS(NS, 'title');
+      ttl.textContent = full
+        ? `${fmtHz(fLo)} – ${fmtHz(fHi)}`
+        : `Ch. ${i + 1}  ·  ${fmtHz(fLo)} – ${fmtHz(fHi)}`;
+      pl.appendChild(ttl);
+      svg.appendChild(pl);
+    }
+
+    const modCap = document.createElementNS(NS, 'circle');
+    modCap.setAttribute('cx', SVG_CX); modCap.setAttribute('cy', SVG_CY);
+    modCap.setAttribute('r', '11'); modCap.setAttribute('fill', '#0d1117');
+    svg.appendChild(modCap);
+
+    const TICK_N = 8;
+    const ticks = document.getElementById('freqTicks');
+    ticks.innerHTML = '';
+    for (let k = 0; k <= TICK_N; k++) {
+      const f = F_HIGH * Math.pow(F_LOW / F_HIGH, (TICK_N - k) / TICK_N);
+      const span = document.createElement('span');
+      span.className = 'freq-tick-lbl';
+      span.style.left = `${(k / TICK_N) * 100}%`;
+      if (k === 0) span.style.transform = 'none';
+      else if (k === TICK_N) span.style.transform = 'translateX(-100%)';
+      span.textContent = fmtHz(f);
+      ticks.appendChild(span);
+    }
+
+    const bar = document.getElementById('freqBar');
+    bar.innerHTML = '';
+    for (let i = 0; i < drawN; i++) {
+      const seg = document.createElement('div');
+      seg.className = 'freq-bar-seg';
+      const tMidBar = THETA_MAX * (drawN - 0.5 - i) / drawN;
+      const reachableBar = full || tMidBar <= THETA_MAX * 0.625;
+      seg.style.background = reachableBar ? bandColor(i, drawN) : '#2d3748';
+      bar.appendChild(seg);
+    }
+
+    if (full) {
+      document.getElementById('cochleaCaption').innerHTML =
+        `<span class="caption-title"><strong>Normal Hearing</strong>: ~3,500 Hair Cells</span>The full cochlea is active, translating the complete range of sound into precise neural signals.`;
+    } else {
+      const cap = CAPTIONS[n] ?? { bold: `${n} Electrodes`, rest: '', body: `${n} electrodes sampling the cochlea's frequency range.` };
+      document.getElementById('cochleaCaption').innerHTML =
+        `<span class="caption-title"><strong>${cap.bold}</strong>: ${cap.rest}</span>${cap.body}`;
+    }
+  }
+
+  buildCochlea(null);
+  setSimState('idle');
+  updateSettingsColor();
+</script>
+</body>
+</html>
