@@ -32,19 +32,19 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            cochlear/ci_music/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('cochlear/ci_music/Cargo.lock') }}
+            ci_music/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('ci_music/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
 
       - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
       - name: Build WASM
-        working-directory: cochlear/ci_music
+        working-directory: ci_music
         run: wasm-pack build --target web --out-dir ../../_site/pkg
 
       - name: Assemble site
-        run: cp cochlear/web/index.html _site/index.html
+        run: cp web/index.html _site/index.html
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
