@@ -41,7 +41,7 @@ jobs:
 
       - name: Build WASM
         working-directory: ci_music
-        run: wasm-pack build --target web --out-dir ../../_site/pkg
+        run: wasm-pack build --target web --out-dir ../_site/pkg
 
       - name: Assemble site
         run: cp web/index.html _site/index.html
