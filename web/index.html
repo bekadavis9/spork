@@ -53,7 +53,8 @@
       display: flex; height: 18px; border-radius: 4px; overflow: hidden;
       gap: 2px; background: #30363d; margin-top: 4px;
     }
-    .freq-bar-seg { flex: 1; }
+    .freq-bar-seg { flex: 1; transition: background 0.12s ease; }
+    #cochleaSvg polyline { transition: stroke 0.12s ease; }
     .freq-bar-labels { display: flex; justify-content: space-between; margin-top: 6px; }
     .freq-bar-labels span { font-size: 0.7rem; color: #8b949e; }
     .cochlea-explainer {
@@ -314,6 +315,7 @@
 </div>
 <script type="module">
   import init, { process_audio } from './pkg/ci_music.js';
+  import { F_LOW, F_HIGH, bandFreqs, bandColor, fmtHz, bandBinRange, bandEnergy } from './viz.js';
 
   // ── WASM initialisation ───────────────────────────────────────────────────
   // Start loading WASM immediately; doSimulate awaits this before processing.
@@ -358,6 +360,58 @@
   let _hasResult  = false;
   let _simTimer   = null;
 
+  // ── Live frequency visualisation ──────────────────────────────────────────
+  let bandPolylines = [];
+  let bandBarSegs   = [];
+  let bandReachable = [];
+  let currentBandN  = 0;
+  let analyser      = null;
+  let freqData      = null;
+  let vizRafId      = null;
+
+  function ensureAnalyser() {
+    if (analyser) return;
+    const src = audioCtx.createMediaElementSource(playerEl);
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 2048;
+    analyser.smoothingTimeConstant = 0.8;
+    src.connect(analyser);
+    analyser.connect(audioCtx.destination);
+    freqData = new Uint8Array(analyser.frequencyBinCount);
+  }
+
+  function startViz() {
+    audioCtx.resume();
+    ensureAnalyser();
+    if (vizRafId !== null) return;
+    (function tick() {
+      vizRafId = requestAnimationFrame(tick);
+      const n = currentBandN;
+      if (!n) return;
+      analyser.getByteFrequencyData(freqData);
+      const nyquist = audioCtx.sampleRate / 2;
+      for (let i = 0; i < n; i++) {
+        if (!bandReachable[i]) continue;
+        const [lo, hi] = bandFreqs(i, n);
+        const [loIdx, hiIdx] = bandBinRange(lo, hi, nyquist, freqData.length);
+        const avg = bandEnergy(freqData, loIdx, hiIdx);
+        const color = avg > 20 ? bandColor(i, n) : '#2d3748';
+        if (bandPolylines[i]) bandPolylines[i].style.stroke = color;
+        if (bandBarSegs[i])   bandBarSegs[i].style.background = color;
+      }
+    })();
+  }
+
+  function stopViz() {
+    if (vizRafId !== null) { cancelAnimationFrame(vizRafId); vizRafId = null; }
+    const n = currentBandN;
+    for (let i = 0; i < n; i++) {
+      if (!bandReachable[i]) continue;
+      if (bandPolylines[i]) bandPolylines[i].style.stroke = bandColor(i, n);
+      if (bandBarSegs[i])   bandBarSegs[i].style.background = bandColor(i, n);
+    }
+  }
+
   // ── File input ───────────────────────────────────────────────────────────
   const dz = document.getElementById('dz');
   const fi = document.getElementById('fileInput');
@@ -380,6 +434,7 @@
     document.getElementById('fileRowName').textContent = f.name;
     if (origSrc) URL.revokeObjectURL(origSrc);
     origSrc = URL.createObjectURL(f);
+    // Reset sim state for new file
     simReady = false;
     _hasResult = false;
     simSrc = null;
@@ -389,6 +444,10 @@
   // ── A/B toggle ───────────────────────────────────────────────────────────
   const playerEl     = document.getElementById('player');
   const settingsCard = document.getElementById('settingsCard');
+
+  playerEl.addEventListener('play',  startViz);
+  playerEl.addEventListener('pause', stopViz);
+  playerEl.addEventListener('ended', stopViz);
 
   function setAbMode(mode) {
     const pos        = playerEl.currentTime;
@@ -554,29 +613,11 @@
   const SVG_CX = 130, SVG_CY = 130, R_MAX = 105, R_MIN = 14;
   const THETA_MAX = 2.5 * 2 * Math.PI;
   const K_SP = Math.log(R_MAX / R_MIN) / THETA_MAX;
-  const F_LOW = 70, F_HIGH = 8500;
+  // F_LOW, F_HIGH, bandFreqs, bandColor, fmtHz, bandBinRange, bandEnergy imported from viz.js
 
   function spiralPt(theta) {
     const r = R_MAX * Math.exp(-K_SP * theta);
     return [SVG_CX + r * Math.cos(theta), SVG_CY + r * Math.sin(theta)];
-  }
-
-  function bandColor(i, n) {
-    const hue = 20 + 200 * i / Math.max(n - 1, 1);
-    return `hsl(${hue.toFixed(0)},75%,58%)`;
-  }
-
-  function fmtHz(f) {
-    if (f < 1000) return `${Math.round(f / 10) * 10} Hz`;
-    if (f < 2000) return `${(Math.round(f / 100) / 10).toFixed(1)} kHz`;
-    const r = Math.round(f / 500) * 500;
-    return `${r % 1000 === 0 ? r / 1000 : (r / 1000).toFixed(1)} kHz`;
-  }
-
-  function bandFreqs(i, n) {
-    const lo = F_HIGH * Math.pow(F_LOW / F_HIGH, (n - i) / n);
-    const hi = F_HIGH * Math.pow(F_LOW / F_HIGH, (n - 1 - i) / n);
-    return [lo, hi];
   }
 
   const CAPTIONS = {
@@ -586,13 +627,19 @@
   };
 
   function buildCochlea(n) {
+    stopViz();
     const NS = 'http://www.w3.org/2000/svg';
     const svg = document.getElementById('cochleaSvg');
     svg.innerHTML = '';
 
     const full = n === null;
     const drawN = full ? 48 : n;
+    bandPolylines = [];
+    bandBarSegs   = [];
+    bandReachable = [];
+    currentBandN  = drawN;
 
+    // Background tube
     const bgPts = [];
     for (let i = 0; i <= 360; i++) {
       const [x, y] = spiralPt(THETA_MAX * i / 360);
@@ -607,6 +654,7 @@
     bg.setAttribute('stroke-linejoin', 'round');
     svg.appendChild(bg);
 
+    // Colored band segments — i=0 lowest freq (apex), i=drawN-1 highest (base)
     for (let i = 0; i < drawN; i++) {
       const t0 = THETA_MAX * (drawN - 1 - i) / drawN;
       const t1 = THETA_MAX * (drawN - i) / drawN;
@@ -621,7 +669,8 @@
       pl.setAttribute('fill', 'none');
       const tMid = THETA_MAX * (drawN - 0.5 - i) / drawN;
       const reachable = full || tMid <= THETA_MAX * 0.625;
-      pl.setAttribute('stroke', reachable ? bandColor(i, drawN) : '#2d3748');
+      pl.style.stroke = reachable ? bandColor(i, drawN) : '#2d3748';
+      bandPolylines.push(pl); bandReachable.push(reachable);
       pl.setAttribute('stroke-width', '14');
       pl.setAttribute('stroke-linecap', 'round');
       pl.setAttribute('stroke-linejoin', 'round');
@@ -634,11 +683,13 @@
       svg.appendChild(pl);
     }
 
+    // Modiolus cap
     const modCap = document.createElementNS(NS, 'circle');
     modCap.setAttribute('cx', SVG_CX); modCap.setAttribute('cy', SVG_CY);
     modCap.setAttribute('r', '11'); modCap.setAttribute('fill', '#0d1117');
     svg.appendChild(modCap);
 
+    // Frequency tick labels — always 8 divisions as a fixed reference
     const TICK_N = 8;
     const ticks = document.getElementById('freqTicks');
     ticks.innerHTML = '';
@@ -653,6 +704,7 @@
       ticks.appendChild(span);
     }
 
+    // Frequency bar
     const bar = document.getElementById('freqBar');
     bar.innerHTML = '';
     for (let i = 0; i < drawN; i++) {
@@ -662,8 +714,10 @@
       const reachableBar = full || tMidBar <= THETA_MAX * 0.625;
       seg.style.background = reachableBar ? bandColor(i, drawN) : '#2d3748';
       bar.appendChild(seg);
+      bandBarSegs.push(seg);
     }
 
+    // Caption
     if (full) {
       document.getElementById('cochleaCaption').innerHTML =
         `<span class="caption-title"><strong>Normal Hearing</strong>: ~3,500 Hair Cells</span>The full cochlea is active, translating the complete range of sound into precise neural signals.`;
@@ -672,8 +726,11 @@
       document.getElementById('cochleaCaption').innerHTML =
         `<span class="caption-title"><strong>${cap.bold}</strong>: ${cap.rest}</span>${cap.body}`;
     }
+
+    if (!full && !playerEl.paused) startViz();
   }
 
+  // Initial render — full coverage (normal hearing), settings grayed until sim is ready
   buildCochlea(null);
   setSimState('idle');
   updateSettingsColor();
