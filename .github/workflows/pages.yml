@@ -44,7 +44,9 @@ jobs:
         run: wasm-pack build --target web --out-dir ../_site/pkg
 
       - name: Assemble site
-        run: cp web/index.html _site/index.html
+        run: |
+          cp web/index.html _site/index.html
+          cp web/viz.js _site/viz.js
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
