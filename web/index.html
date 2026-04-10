@@ -73,13 +73,28 @@
     /* ── Drop zone ──────────────────────────────────────────────────────── */
     .drop-zone {
       border: 2px dashed #30363d; border-radius: 8px;
-      padding: 20px; text-align: center; cursor: pointer;
+      padding: 20px; text-align: center; cursor: default;
       transition: border-color 0.15s, background 0.15s;
     }
-    .drop-zone:hover { border-color: #58a6ff; background: rgba(88,166,255,0.04); }
-    .drop-zone.over  { border-color: #58a6ff; background: rgba(88,166,255,0.08); }
+    .drop-zone.dz-empty { cursor: pointer; }
+    .drop-zone.dz-empty:hover { border-color: #58a6ff; background: rgba(88,166,255,0.04); }
+    .drop-zone.over { border-color: #58a6ff; background: rgba(88,166,255,0.08); }
     .dz-icon { font-size: 1.8rem; margin-bottom: 8px; }
     .dz-hint { color: #8b949e; font-size: 0.85rem; }
+    .dz-loading {
+      display: none; align-items: center; justify-content: center;
+      gap: 12px; min-height: 60px; color: #8b949e; font-size: 0.88rem;
+    }
+    .dz-actions {
+      display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px;
+    }
+    .dz-action-btn {
+      font-size: 0.72rem; color: #8b949e; background: none;
+      border: 1px solid #30363d; border-radius: 6px; padding: 3px 10px;
+      cursor: pointer; font-family: inherit; white-space: nowrap;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .dz-action-btn:hover { border-color: #8b949e; color: #e6edf3; }
 
     /* ── Compact file row (replaces drop zone after pick) ────────────────── */
     .file-row { display: none; }
@@ -117,9 +132,17 @@
     }
     .era-row[data-strat="cis"].active .era-name { color: #f0c844; }
     .era-row[data-strat="fs4"].active {
+      background: rgba(139,92,246,0.07); border-color: rgba(139,92,246,0.3); border-top-color: #8b5cf6;
+    }
+    .era-row[data-strat="fs4"].active .era-name { color: #a78bfa; }
+    .era-row[data-mode="sim"].active {
       background: rgba(88,166,255,0.07); border-color: rgba(88,166,255,0.3); border-top-color: #58a6ff;
     }
-    .era-row[data-strat="fs4"].active .era-name { color: #79b8ff; }
+    .era-row[data-mode="sim"].active .era-name { color: #79b8ff; }
+    .era-row[data-mode="orig"].active {
+      background: rgba(88,166,255,0.07); border-color: rgba(88,166,255,0.3); border-top-color: #58a6ff;
+    }
+    .era-row[data-mode="orig"].active .era-name { color: #79b8ff; }
 
     /* ── Channel selector ───────────────────────────────────────────────── */
     .ch-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; max-width: 480px; margin: 0 auto; }
@@ -133,6 +156,17 @@
     .ch-num   { display: block; font-size: 1.35rem; font-weight: 700; line-height: 1; }
     .ch-label { display: block; font-size: 0.68rem; color: #8b949e; margin-top: 5px; }
     .ch-btn.active .ch-label { color: #a5c8ff; }
+    /* Channel active color follows selected strategy */
+    #settingsCard[data-strat="cis"] .ch-btn.active {
+      background: rgba(210,153,34,0.1); border-color: rgba(210,153,34,0.6);
+    }
+    #settingsCard[data-strat="cis"] .ch-btn.active .ch-num  { color: #f0c844; }
+    #settingsCard[data-strat="cis"] .ch-btn.active .ch-label { color: #d29922; }
+    #settingsCard[data-strat="fs4"] .ch-btn.active {
+      background: rgba(139,92,246,0.1); border-color: rgba(139,92,246,0.6);
+    }
+    #settingsCard[data-strat="fs4"] .ch-btn.active .ch-num  { color: #a78bfa; }
+    #settingsCard[data-strat="fs4"] .ch-btn.active .ch-label { color: #8b5cf6; }
 
     /* ── A/B toggle ─────────────────────────────────────────────────────── */
     .ab-toggle {
@@ -150,6 +184,27 @@
     .ab-btn.ab-active { background: #1f4a8f; color: #e6edf3; }
     .ab-btn:hover:not(.ab-active) { background: rgba(255,255,255,0.04); color: #c9d1d9; }
 
+    /* ── Custom audio player bar ───────────────────────────────────────── */
+    .custom-player {
+      display: flex; align-items: center; gap: 10px; padding: 6px 0;
+    }
+    .cp-btn {
+      background: none; border: none; color: #e6edf3; cursor: pointer;
+      font-size: 1rem; padding: 0; width: 20px; flex-shrink: 0; line-height: 1;
+    }
+    .cp-track {
+      position: relative; flex: 1; height: 4px; background: #30363d;
+      border-radius: 2px; cursor: pointer;
+    }
+    .cp-fill {
+      position: absolute; left: 0; top: 0; height: 100%;
+      background: #58a6ff; border-radius: 2px; width: 0%;
+      pointer-events: none;
+    }
+    .cp-time {
+      font-size: 0.75rem; color: #8b949e; white-space: nowrap; flex-shrink: 0;
+    }
+
     /* ── Download button (matches Change file style) ───────────────────── */
     .file-row-download {
       font-size: 0.75rem; color: #8b949e; background: none;
@@ -160,17 +215,18 @@
     .file-row-download:hover { border-color: #8b949e; color: #e6edf3; }
 
     /* ── Audio mode: grey out settings when original is playing ─────────── */
-    .playing-original .ch-btn.active {
+    /* Use [data-strat] to beat the strategy-specific ch-btn rules above */
+    #settingsCard.playing-original[data-strat] .ch-btn.active {
       background: rgba(139,148,158,0.08); border-color: rgba(139,148,158,0.25);
     }
-    .playing-original .ch-btn.active .ch-num  { color: #6e7681; }
-    .playing-original .ch-btn.active .ch-label { color: #6e7681; }
+    #settingsCard.playing-original[data-strat] .ch-btn.active .ch-num  { color: #6e7681; }
+    #settingsCard.playing-original[data-strat] .ch-btn.active .ch-label { color: #6e7681; }
     .playing-original .era-row[data-strat="cis"].active,
     .playing-original .era-row[data-strat="fs4"].active {
       background: rgba(139,148,158,0.05);
       border-color: rgba(139,148,158,0.2); border-top-color: rgba(139,148,158,0.35);
     }
-    .playing-original .era-row.active .era-name { color: #6e7681; }
+    .playing-original .era-row[data-strat].active .era-name { color: #6e7681; }
 
     /* ── Sim card states ────────────────────────────────────────────────── */
     .sim-idle {
@@ -236,26 +292,8 @@
       <p class="cochlea-caption" id="cochleaCaption"></p>
     </div>
 
-    <!-- Card 1: Original Audio -->
-    <div class="card">
-      <div class="section-label">Original Audio</div>
-
-      <div class="drop-zone" id="dz">
-        <div class="dz-icon">🎵</div>
-        <div class="dz-hint">Drop an audio file here, or click to browse</div>
-      </div>
-      <input type="file" id="fileInput" accept=".wav,.mp3,.flac,.ogg,.aac,.m4a,audio/*" style="display:none">
-
-      <div class="file-row" id="fileRow">
-        <div class="file-row-meta">
-          <span class="file-row-name" id="fileRowName"></span>
-          <button class="file-row-change" onclick="document.getElementById('fileInput').click()">Change file</button>
-        </div>
-      </div>
-    </div>
-
     <!-- Card 2: Settings -->
-    <div class="card" id="settingsCard">
+    <div class="card" id="settingsCard" data-strat="cis">
       <div class="section-label">CI Generation</div>
       <div class="era-list">
         <button class="era-row active" data-strat="cis" onclick="setStrat('cis')">
@@ -284,26 +322,46 @@
       </div>
     </div>
 
-    <!-- Card 3: CI Simulation result -->
+    <!-- Card 3: Audio (upload + playback) -->
     <div class="card" id="simCard">
-      <div class="section-label">Simulated Audio</div>
+      <div class="section-label">Audio</div>
 
-      <div class="sim-idle" id="simIdle">Upload an audio file to begin</div>
-
-      <div class="sim-loading" id="simLoading">
-        <div class="sim-spinner"></div>
-        <span id="simLoadingText">Processing…</span>
-      </div>
-
-      <div class="sim-result" id="simResult">
-        <div class="ab-toggle">
-          <button class="ab-btn" id="btnOrig" onclick="setAbMode('original')">Original</button>
-          <button class="ab-btn ab-active" id="btnSim" onclick="setAbMode('sim')">CI Simulation</button>
+      <div class="drop-zone dz-empty" id="dz">
+        <div id="dzEmpty">
+          <div class="dz-icon">🎵</div>
+          <div class="dz-hint">Drop an audio file here, or click to browse</div>
         </div>
-        <audio id="player" controls style="width:100%"></audio>
-        <div class="file-row-meta" style="margin-top:12px">
-          <span class="file-row-name" id="simFileName"></span>
-          <button id="dlBtn" class="file-row-download">↓ Download</button>
+        <div class="dz-loading" id="dzLoading">
+          <div class="sim-spinner"></div>
+          <span id="simLoadingText">Processing…</span>
+        </div>
+        <div id="dzPlayer" style="display:none">
+          <audio id="player" style="display:none"></audio>
+          <div class="custom-player">
+            <button class="cp-btn" id="cpBtn">▶</button>
+            <div class="cp-track" id="cpTrack">
+              <div class="cp-fill" id="cpFill"></div>
+            </div>
+            <span class="cp-time" id="cpTime">0:00 / 0:00</span>
+          </div>
+          <div class="dz-actions">
+            <button class="dz-action-btn" onclick="document.getElementById('fileInput').click()">Change file</button>
+            <button id="dlBtn" class="dz-action-btn">↓ Download</button>
+          </div>
+        </div>
+      </div>
+      <input type="file" id="fileInput" accept=".wav,.mp3,.flac,.ogg,.aac,.m4a,audio/*" style="display:none">
+
+      <div id="abSection" style="display:none; margin-top:14px">
+        <div class="era-list">
+          <button class="era-row" data-mode="orig" id="btnOrig" onclick="setAbMode('original')">
+            <span class="era-name">Original</span>
+            <span class="era-desc">Unprocessed audio</span>
+          </button>
+          <button class="era-row active" data-mode="sim" id="btnSim" onclick="setAbMode('sim')">
+            <span class="era-name">CI Simulation</span>
+            <span class="era-desc">Cochlear implant processing</span>
+          </button>
         </div>
       </div>
 
@@ -416,7 +474,7 @@
   const dz = document.getElementById('dz');
   const fi = document.getElementById('fileInput');
 
-  dz.addEventListener('click', () => fi.click());
+  dz.addEventListener('click', () => { if (!file) fi.click(); });
   ['dragover','dragenter'].forEach(ev =>
     dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('over'); }));
   ['dragleave','dragend'].forEach(ev =>
@@ -429,15 +487,12 @@
 
   function pick(f) {
     file = f;
-    dz.style.display = 'none';
-    document.getElementById('fileRow').style.display = 'block';
-    document.getElementById('fileRowName').textContent = f.name;
     if (origSrc) URL.revokeObjectURL(origSrc);
     origSrc = URL.createObjectURL(f);
-    // Reset sim state for new file
     simReady = false;
     _hasResult = false;
     simSrc = null;
+    setSimState('loading');
     scheduleSimulate(0);
   }
 
@@ -448,6 +503,41 @@
   playerEl.addEventListener('play',  startViz);
   playerEl.addEventListener('pause', stopViz);
   playerEl.addEventListener('ended', stopViz);
+
+  // ── Custom player controls ────────────────────────────────────────────────
+  const cpBtn   = document.getElementById('cpBtn');
+  const cpTrack = document.getElementById('cpTrack');
+  const cpFill  = document.getElementById('cpFill');
+  const cpTime  = document.getElementById('cpTime');
+
+  function fmtTime(s) {
+    if (!isFinite(s) || isNaN(s)) return '0:00';
+    const m = Math.floor(s / 60);
+    return `${m}:${Math.floor(s % 60).toString().padStart(2, '0')}`;
+  }
+  function updateCp() {
+    const pct = playerEl.duration ? (playerEl.currentTime / playerEl.duration) * 100 : 0;
+    cpFill.style.width = pct + '%';
+    cpTime.textContent = `${fmtTime(playerEl.currentTime)} / ${fmtTime(playerEl.duration)}`;
+  }
+  playerEl.addEventListener('timeupdate',     updateCp);
+  playerEl.addEventListener('loadedmetadata', updateCp);
+  playerEl.addEventListener('play',  () => { cpBtn.textContent = '⏸'; });
+  playerEl.addEventListener('pause', () => { cpBtn.textContent = '▶'; });
+  playerEl.addEventListener('ended', () => { cpBtn.textContent = '▶'; updateCp(); });
+  cpBtn.addEventListener('click', () => {
+    audioCtx.resume();
+    playerEl.paused ? playerEl.play().catch(() => {}) : playerEl.pause();
+  });
+  let cpSeeking = false;
+  function cpSeek(e) {
+    const r = cpTrack.getBoundingClientRect();
+    const pct = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+    if (playerEl.duration) playerEl.currentTime = pct * playerEl.duration;
+  }
+  cpTrack.addEventListener('mousedown', e => { cpSeeking = true; cpSeek(e); });
+  document.addEventListener('mousemove', e => { if (cpSeeking) cpSeek(e); });
+  document.addEventListener('mouseup', () => { cpSeeking = false; });
 
   function setAbMode(mode) {
     const pos        = playerEl.currentTime;
@@ -464,18 +554,22 @@
       }, { once: true });
     }
 
-    document.getElementById('btnOrig').classList.toggle('ab-active', mode === 'original');
-    document.getElementById('btnSim').classList.toggle('ab-active', mode === 'sim');
+    document.getElementById('btnOrig').classList.toggle('active', mode === 'original');
+    document.getElementById('btnSim').classList.toggle('active', mode === 'sim');
+    document.getElementById('dlBtn').style.display = mode === 'original' ? 'none' : '';
     buildCochlea(mode === 'original' ? null : channels);
     updateSettingsColor();
   }
 
   // ── Sim card state machine ───────────────────────────────────────────────
   function setSimState(state) {
-    document.getElementById('simIdle').style.display    = state === 'idle'    ? 'flex'  : 'none';
-    document.getElementById('simLoading').style.display = state === 'loading' ? 'flex'  : 'none';
-    document.getElementById('simResult').style.display  = state === 'ready'   ? 'block' : 'none';
+    if (state === 'idle') file = null;
+    document.getElementById('dzEmpty').style.display   = state === 'idle'    ? '' : 'none';
+    document.getElementById('dzLoading').style.display = state === 'loading' ? 'flex' : 'none';
+    document.getElementById('dzPlayer').style.display  = state === 'ready'   ? '' : 'none';
+    document.getElementById('abSection').style.display = state === 'ready'   ? '' : 'none';
     document.getElementById('simCard').classList.toggle('has-result', state === 'ready');
+    document.getElementById('dz').classList.toggle('dz-empty', state === 'idle');
   }
 
   // ── Simulation ───────────────────────────────────────────────────────────
@@ -555,7 +649,6 @@
       const ext  = file.name.lastIndexOf('.');
       const base = ext >= 0 ? file.name.slice(0, ext) : file.name;
       const simName = `${base}_ci_${channels}ch_${strategy}.wav`;
-      document.getElementById('simFileName').textContent = simName;
       document.getElementById('dlBtn').onclick = () => saveFile(blob, simName);
 
       _hasResult = true;
@@ -574,8 +667,8 @@
         }
       }
       abMode = 'sim';
-      document.getElementById('btnOrig').classList.remove('ab-active');
-      document.getElementById('btnSim').classList.add('ab-active');
+      document.getElementById('btnOrig').classList.remove('active');
+      document.getElementById('btnSim').classList.add('active');
       buildCochlea(channels);
       updateSettingsColor();
     } catch (e) {
@@ -598,7 +691,8 @@
 
   function setStrat(s) {
     strategy = s;
-    document.querySelectorAll('.era-row').forEach(b =>
+    settingsCard.dataset.strat = s;
+    document.querySelectorAll('.era-row[data-strat]').forEach(b =>
       b.classList.toggle('active', b.dataset.strat === s));
     updateSettingsColor();
     scheduleSimulate(150);
@@ -732,7 +826,6 @@
 
   // Initial render — full coverage (normal hearing), settings grayed until sim is ready
   buildCochlea(null);
-  setSimState('idle');
   updateSettingsColor();
 </script>
 </body>
